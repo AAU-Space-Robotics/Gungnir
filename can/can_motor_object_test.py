@@ -15,7 +15,7 @@ async def read_messages(bus):
                     print(f"[{time.time()}] Motor 1 speed: {motor1.speed}")
                 elif message.data[1:3]==b'\x64\x60': #Position response
                     motor1.position = int.from_bytes(message.data[4:8], byteorder='little', signed=True)
-                    print(f"[{time.time()}] Motor 1 speed: {motor1.position}")
+                    print(f"[{time.time()}] Motor 1 position: {motor1.position}")
             #Motor 2
             if message.arbitration_id == motor2.rx_id:
                 if message.data[1:3]==b'\x6c\x60': #Speed response
@@ -23,7 +23,7 @@ async def read_messages(bus):
                     print(f"[{time.time()}] Motor 2 speed: {motor2.speed}")
                 elif message.data[1:3]==b'\x64\x60': #Position response
                     motor2.position = int.from_bytes(message.data[4:8], byteorder='little', signed=True)
-                    print(f"[{time.time()}] Motor 2 speed: {motor2.position}")
+                    print(f"[{time.time()}] Motor 2 position: {motor2.position}")
 
 
             message = bus.recv(timeout=0)
