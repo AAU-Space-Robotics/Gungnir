@@ -17,17 +17,19 @@ from launch.substitutions import (
     PathJoinSubstitution,
 )
 
+# Helper function for reading yaml files
 def load_yaml(package_name, file_path):
     package_path = get_package_share_directory(package_name)
     absolute_file_path = os.path.join(package_path, file_path)
-
     try:
         with open(absolute_file_path, "r") as file:
             return yaml.safe_load(file)
-    except EnvironmentError:  # parent of IOError, OSError *and* WindowsError where available
+    except EnvironmentError:
         return None
 
+
 def generate_launch_description():
+
     # Get URDF
     urdf_folder = os.path.join(get_package_share_directory("gungnir_description"), "urdf")
     urdf = os.path.join(urdf_folder, "gungnir.urdf")
@@ -41,7 +43,7 @@ def generate_launch_description():
         semantic_content_values = f.read()
     semantic_content = {'robot_description_semantic': semantic_content_values}
 
-    # Get kinematics
+    # Get kinematics solver parameters
     robot_kinematics = {
         "robot_description_kinematics":
         load_yaml(
@@ -54,6 +56,7 @@ def generate_launch_description():
     servo_yaml = load_yaml("gungnir_controller", "config/gungnir_config.yaml")
     servo_params = {"moveit_servo": servo_yaml}
 
+    # Get joint limits
     joint_limits = ParameterFile(
         PathJoinSubstitution([
             FindPackageShare("gungnir_description"),
@@ -62,23 +65,25 @@ def generate_launch_description():
         allow_substs=True,
     )
 
-    # Planning Configuration
+    # Set up planning configuration
     ompl_planning_yaml = load_yaml("gungnir_controller",
                                    "config/planners/ompl_planning.yaml")
     pilz_planning_yaml = load_yaml("gungnir_controller",
                                    "config/planners/pilz_planning.yaml")
     planning_pipeline_config = {
-        "default_planning_pipeline": "pilz",
+        "default_planning_pipeline": "pilz", # Using Pilz as default planner
         "planning_pipelines": ["ompl", "pilz"],
         "ompl": ompl_planning_yaml,
         "pilz": pilz_planning_yaml,
     }
 
+    # MoveIt controller manager
     moveit_controller_manager = {
         "moveit_controller_manager":
         "moveit_simple_controller_manager/MoveItSimpleControllerManager",
     }
 
+    # Get MoveIt controllers
     moveit_controllers = ParameterFile(
         PathJoinSubstitution([
             FindPackageShare("gungnir_controller"),
@@ -87,6 +92,7 @@ def generate_launch_description():
         allow_substs=True,
     )
 
+    # Trajectory execution parameters
     trajectory_execution = {
         "moveit_manage_controllers": False,
         "trajectory_execution.allowed_execution_duration_scaling": 1.2,
@@ -94,7 +100,8 @@ def generate_launch_description():
         "trajectory_execution.allowed_start_tolerance": 0.01,
     }
 
-    planning_scene_monitor_parameters = {
+    # Planning parameters
+    planning_parameters = {
         "publish_planning_scene": True,
         "publish_geometry_updates": True,
         "publish_state_updates": True,
@@ -102,20 +109,21 @@ def generate_launch_description():
         "publish_robot_description_semantic": True,
     }
 
+    # Move group node
     move_group_node = Node(
         package="moveit_ros_move_group",
         executable="move_group",
         output="screen",
         parameters=[
-            robot_description,
-            semantic_content,
-            robot_kinematics,
-            joint_limits,
-            planning_pipeline_config,
-            trajectory_execution,
-            moveit_controller_manager,
-            moveit_controllers,
-            planning_scene_monitor_parameters,
+            robot_description,          # URDF
+            semantic_content,           # SRDF
+            robot_kinematics,           # Kinematics solver parameters
+            joint_limits,               # Joint velocity and acceleration limits (not position limits)
+            planning_pipeline_config,   # Planning pipeline configuration
+            trajectory_execution,       # Trajectory execution parameters
+            planning_parameters,        # Planning parameters
+            moveit_controller_manager,  # MoveIt controller manager
+            moveit_controllers,         # MoveIt controllers
             {
                 "use_sim_time": False
             },

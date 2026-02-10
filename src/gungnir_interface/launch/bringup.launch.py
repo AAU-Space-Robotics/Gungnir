@@ -17,17 +17,20 @@ from ament_index_python.packages import get_package_share_directory
 
 def generate_launch_description():
 
+    # Get URDF
     urdf_folder = os.path.join(get_package_share_directory("gungnir_description"), "urdf")
     urdf = os.path.join(urdf_folder, "gungnir.urdf")
     robot_description_values = ParameterValue(Command(['xacro ', urdf]), value_type=str)
     robot_description = {'robot_description': robot_description_values}
 
+    # Controller config file
     controller_config = PathJoinSubstitution([
         FindPackageShare("gungnir_interface"), 
         "config", 
         "controllers.yaml",
     ])
 
+    # ROS2 Control Node
     controller_manager_node = Node(
         package="controller_manager",
         executable="ros2_control_node",
@@ -37,6 +40,7 @@ def generate_launch_description():
         output="screen",
     )
 
+    # Joint trajectory controller
     spawn_joint_controller = Node(
         package="controller_manager",
         executable="spawner",
@@ -49,13 +53,15 @@ def generate_launch_description():
         ],
     )
 
+    # Robot State Publisher
     robot_state_publisher_node = Node(
         package="robot_state_publisher",
         executable="robot_state_publisher",
         output="both",
         parameters=[robot_description],
     )
-
+    
+    # Joint State Broadcaster
     joint_state_broadcaster = Node(
         package="controller_manager",
         executable="spawner",
