@@ -1,6 +1,5 @@
 #!/bin/bash
 source /opt/ros/humble/setup.bash
-#source /home/zed_ros2_ws/install/setup.bash #Pøllefar skal vi have den her?
 echo "source /opt/ros/humble/setup.bash" >> ~/.bashrc
 echo "source /home/ws/install/setup.bash" >> ~/.bashrc
 
