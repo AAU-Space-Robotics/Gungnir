@@ -1,0 +1,38 @@
+version: "3.8"
+
+services:
+  gungnir_arm:
+    container_name: gungnir
+    
+
+    build:
+      context: .
+      dockerfile: Dockerfile
+      args:
+        USER_UID: ${UID}
+        USER_GID: ${GID}
+    image: gungnir:latest
+
+    privileged: true
+    network_mode: host
+
+    environment:
+      - DISPLAY=${DISPLAY}
+      - QT_X11_NO_MITSHM=1
+
+    volumes:
+      - /tmp/.X11-unix:/tmp/.X11-unix:rw
+      - ${HOME}/gungnir/workspace:/home/ws
+      - /dev:/dev
+
+    stdin_open: true
+    tty: true
+
+    command: >
+      bash -c "
+        source /opt/ros/humble/setup.bash &&
+        if [ -f /home/ros_workspace/install/setup.bash ]; then
+          source /home/ros_workspace/install/setup.bash;
+        fi &&
+        bash
+      "
