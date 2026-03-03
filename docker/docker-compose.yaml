@@ -3,8 +3,12 @@ version: "3.8"
 services:
   gungnir_arm:
     container_name: gungnir
+    cap_add:
+      - NET_ADMIN
+      - SYS_ADMIN
+    devices:
+      - /dev/net/tun
     
-
     build:
       context: .
       dockerfile: Dockerfile
@@ -19,6 +23,7 @@ services:
     environment:
       - DISPLAY=${DISPLAY}
       - QT_X11_NO_MITSHM=1
+      - CAN_INTERFACE=can0
 
     volumes:
       - /tmp/.X11-unix:/tmp/.X11-unix:rw

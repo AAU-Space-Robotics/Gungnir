@@ -32,6 +32,20 @@ RUN apt-get update && apt-get install -y python3-pip && \
 # Install Zenoh for better ros2 network performance
 RUN apt-get update && apt-get install -y ros-humble-rmw-zenoh-cpp
 
+# Install myactuator rmd python library
+RUN apt-get update && apt-get install -y \
+  build-essential \
+  cmake \
+  can-utils \
+  iproute2 \
+  python3-pybind11 
+
+RUN git clone https://github.com/2b-t/myactuator_rmd.git && \
+  cd myactuator_rmd && \
+  pip3 install .
+
+
+
 # Clean up
 RUN rm -rf /var/lib/apt/lists/*
 
