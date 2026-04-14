@@ -44,6 +44,9 @@ RUN git clone https://github.com/2b-t/myactuator_rmd.git && \
   cd myactuator_rmd && \
   pip3 install .
 
+# Other ROS packages
+RUN apt-get update && apt-get install -y ros-humble-xacro
+
 
 
 # Clean up

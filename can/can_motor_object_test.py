@@ -85,8 +85,8 @@ j2.sendPositionAbsoluteSetpoint(0.0, 200.0)
 j3.sendPositionAbsoluteSetpoint(0.0, 200.0)
 
 while lol:
-    j1.set_target_position(bus, 10)
-    j4.set_target_position(bus, 10)
+    j1.set_target_position(bus, 100)
+    j4.set_target_position(bus, 100)
     j2.sendPositionAbsoluteSetpoint(10.0, 200.0)
     j3.sendPositionAbsoluteSetpoint(10.0, 200.0)
 

@@ -60,13 +60,13 @@ i = 0
 
 j2 = rmd.ActuatorInterface(driver, 2)
 print(j2.getVersionDate())
-j3 = rmd.ActuatorInterface(driver, 3)
-print(j3.getVersionDate())
+#j3 = rmd.ActuatorInterface(driver, 3)
+#print(j3.getVersionDate())
 
 j2.setCurrentPositionAsEncoderZero()
-j3.setCurrentPositionAsEncoderZero()
+#j3.setCurrentPositionAsEncoderZero()
 j2.reset()
-j3.reset()
+#j3.reset()
 
 
 j1 = can_motor.Motor("j1", 101, "small")
@@ -82,29 +82,36 @@ j4.set_operation_mode(bus, 1)
 j1.set_target_position(bus, 0)
 j4.set_target_position(bus, 0)
 j2.sendPositionAbsoluteSetpoint(0.0, 200.0)
-j3.sendPositionAbsoluteSetpoint(0.0, 200.0)
+#j3.sendPositionAbsoluteSetpoint(0.0, 200.0)
+
+time.sleep(2)
 
 while lol:
-    j1.set_target_position(bus, 10)
-    j4.set_target_position(bus, 10)
-    j2.sendPositionAbsoluteSetpoint(10.0, 200.0)
-    j3.sendPositionAbsoluteSetpoint(10.0, 200.0)
+    j1.set_target_position(bus, 10000, speed = 1000)
+    j4.set_target_position(bus, 10000)
+    j2.sendPositionAbsoluteSetpoint(20.0, 200.0)
+    #j3.sendPositionAbsoluteSetpoint(10.0, 200.0)
 
-    time.sleep(0.5)
+    time.sleep(5)
 
-    j1.set_target_position(bus, 0)
+    j1.set_target_position(bus, 0, speed = 1000)
     j4.set_target_position(bus, 0)
-    j2.sendPositionAbsoluteSetpoint(0.0, 200.0)
-    j3.sendPositionAbsoluteSetpoint(0.0, 200.0)
+    j2.sendPositionAbsoluteSetpoint(-50.0, 200.0)
+    #j3.sendPositionAbsoluteSetpoint(0.0, 200.0)
 
-    time.sleep(0.5)
+    time.sleep(5)
     
     i += 1
 
     if i > 10:
         lol = 0
 
+j2.shutdownMotor()
+j2.stopMotor()
+#j3.shutdownMotor()
+#j3.stopMotor()
+
 
 
 # Run both tasks concurrently
-asyncio.run(main(bus))
+asyncio.run(main(bus)) # skal jo ik være i bunden, men vi leger bare lige
