@@ -4,3 +4,9 @@ install/
 log/
 
 */__pycache__/
+
+*/.vscode/
+
+.devcontainer/
+
+.vscode/

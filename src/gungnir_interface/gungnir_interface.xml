@@ -1,0 +1,9 @@
+<library path="gungnir_interface">
+  <class name="gungnir/RobotSystem"
+         type="gungnir::RobotSystem"
+         base_class_type="hardware_interface::SystemInterface">
+    <description>
+      Hardware plugin for the gungnir robotic manipulator.
+    </description>
+  </class>
+</library>

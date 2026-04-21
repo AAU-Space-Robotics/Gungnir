@@ -11,6 +11,21 @@ ARG USERNAME=gungnir
 ARG USER_UID=1000
 ARG USER_GID=${USER_UID}
 
+#####################################
+##### Create user               #####
+#####################################
+
+RUN if id -u $USER_UID ; then userdel `id -un $USER_UID` ; fi
+
+RUN groupadd --gid $USER_GID $USERNAME \
+    && useradd --uid $USER_UID --gid $USER_GID -m $USERNAME \
+    #
+    # [Optional] Add sudo support. Omit if you don't need to install software after connecting.
+    && apt-get update \
+    && apt-get install -y sudo \
+    && echo $USERNAME ALL=\(root\) NOPASSWD:ALL > /etc/sudoers.d/$USERNAME \
+    && chmod 0440 /etc/sudoers.d/$USERNAME
+
 # Avoid prompts with apt-get
 ARG DEBIAN_FRONTEND=noninteractive
 
@@ -40,25 +55,25 @@ RUN apt-get update && apt-get install -y \
   iproute2 \
   python3-pybind11 
 
-RUN git clone https://github.com/2b-t/myactuator_rmd.git && \
-  cd myactuator_rmd && \
-  pip3 install .
+RUN git clone https://github.com/2b-t/myactuator_rmd.git \
+  && cd myactuator_rmd \
+  && mkdir build \
+  && cd build \
+  && cmake .. -D PYTHON_BINDINGS=on \
+  && make -j $(nproc) \
+  && sudo make install \
+  && cd .. \
+  && pip3 install .
 
 # Other ROS packages
-RUN apt-get update && apt-get install -y ros-humble-xacro
-
-
+RUN apt-get update && apt-get install -y \ 
+  ros-humble-xacro \
+  ros-humble-ros2-control \
+  ros-humble-ros2-controllers \
+  ros-humble-rviz2
 
 # Clean up
 RUN rm -rf /var/lib/apt/lists/*
-
-#####################################
-##### Create user               #####
-#####################################
-
-RUN groupadd --gid $USER_GID $USERNAME && \
-    useradd --uid $USER_UID --gid $USER_GID -m $USERNAME && \
-    echo "$USERNAME ALL=(ALL) NOPASSWD:ALL" >> /etc/sudoers
 
 #####################################
 ##### Copy and set up workspace #####

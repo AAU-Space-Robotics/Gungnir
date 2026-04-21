@@ -1,6 +1,6 @@
 import can
 import time
-from canopen_helpers import enable_motor, set_operation_mode, set_target_speed, fault_reset
+from can.canopen_helpers import enable_motor, set_operation_mode, set_target_speed, fault_reset
 
 # Setup CAN interface (adjust channel and bitrate as needed)
 bus = can.interface.Bus(channel='can0', bustype='socketcan', bitrate=1000000)
