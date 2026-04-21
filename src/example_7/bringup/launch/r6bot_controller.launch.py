@@ -21,8 +21,13 @@ from launch.substitutions import Command, FindExecutable, PathJoinSubstitution, 
 from launch_ros.actions import Node
 from launch_ros.substitutions import FindPackageShare
 
+import os
 
 def generate_launch_description():
+    
+    # Open CAN port for communication with the robot
+    os.system("sudo ip link set can0 up type can bitrate 1000000")
+    
     # Declare arguments
     declared_arguments = []
     declared_arguments.append(

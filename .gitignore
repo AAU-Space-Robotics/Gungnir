@@ -10,3 +10,6 @@ log/
 .devcontainer/
 
 .vscode/
+
+
+entry_build.log
