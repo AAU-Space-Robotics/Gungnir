@@ -10,9 +10,17 @@ find_package(rcpputils REQUIRED)
 
 add_library(gungnir_interface SHARED
   src/gungnir_interface.cpp
+  src/besfoc_driver.cpp
 )
 
+add_executable(test_node src/test_node.cpp)
+
 target_include_directories(gungnir_interface PUBLIC
+  $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/include>
+  $<INSTALL_INTERFACE:include>
+)
+
+target_include_directories(test_node PUBLIC
   $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/include>
   $<INSTALL_INTERFACE:include>
 )
@@ -23,6 +31,14 @@ ament_target_dependencies(gungnir_interface
   pluginlib
   hardware_interface
   rcpputils
+)
+
+ament_target_dependencies(test_node
+  rclcpp
+)
+
+target_link_libraries(test_node
+  gungnir_interface
 )
 
 ament_export_include_directories(include)
@@ -40,6 +56,10 @@ install(TARGETS gungnir_interface
   ARCHIVE DESTINATION lib
   LIBRARY DESTINATION lib
   RUNTIME DESTINATION bin
+)
+
+install(TARGETS test_node
+  DESTINATION lib/${PROJECT_NAME}
 )
 
 install(DIRECTORY include/
