@@ -5,6 +5,8 @@
 #include <iostream>
 #include <vector>
 #include <map>
+#include <memory>
+#include <algorithm>
 
 using namespace std;
 
@@ -14,6 +16,9 @@ namespace besfoc
     const int ERROR = 2;
     const int UNINITIALIZED = 4;
     const int IDLE = 8;
+
+    const int POSITION_MODE = 1;
+    const int SPEED_MODE = 3;
 
 
     const int WRITE_BYTES_1 = 0x2F;
@@ -35,28 +40,46 @@ namespace besfoc
         double velocity;
         int status;
     };
+
+    //TODO: 1 - Add Reads, 2 - Set New Zero 3 - Class Variables for state
+
     class CanMotor
     {
         public:
-            CanMotor(int can_id, const CanBus& bus, double acc = 1000.0, double dec = 1000.0);
+            CanMotor(int can_id, std::shared_ptr<CanBus> bus, int acc = 100, int dec = 100);
             ~CanMotor();
+
+            void set_mode(int mode);
             
-            void set_velocity(double velocity);
-            void set_position(double position);
-            void set_acceleration(double acceleration);
-            void set_deceleration(double deceleration);
+            void set_velocity(int velocity);
+
+            void set_zero_position();
+
+            void set_position_relative(int position, int velocity = 100);
+            void set_position_absolute(int position, int velocity = 100);
+
+            void set_acceleration(int acceleration);
+            void set_deceleration(int deceleration);
+
+            void motor_release();
+            void hard_stop();
+            void soft_stop();
+
+            void shutdown();
 
             void read_state(MotorState& state);
             void stop();
         private:
             
             void initialize_motor();
-            void double_to_bytes(double value, vector<int>& bytes);
+            void to_bytes(int8_t value, vector<int>& bytes);
+            void to_bytes(int16_t value, vector<int>& bytes);
+            void to_bytes(int32_t value, vector<int>& bytes);
 
             void send_can_command(array<int, 2> index, int subIndex, vector<int> data, int data_length);
             int tx_can_id_;
             int rx_can_id_;
-            CanBus bus_;
+            std::shared_ptr<CanBus> bus_;
             
 
     };
