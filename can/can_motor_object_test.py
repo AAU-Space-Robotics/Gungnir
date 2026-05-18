@@ -33,7 +33,7 @@ async def read_messages(bus):
 
 
             message = bus.recv(timeout=0)
-        await asyncio.sle  vcanep(0.001)
+        await asyncio.sleep(0.001)
 
 async def send_requests(bus):
     """Periodically send speed requests to both motors."""

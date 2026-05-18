@@ -1,7 +1,6 @@
 import can
 import time
 
-
 def int32_to_bytes(value):
     """Convert a signed 32-bit integer to a 4-byte little-endian list."""
     return list(value.to_bytes(4, byteorder='little', signed=True))
@@ -19,12 +18,6 @@ def enable_motor(bus, tx_id):
     send_sdo(bus, tx_id, 0x6040, 0x00, [0x06, 0x00], 0x2B)  # Shutdown
     send_sdo(bus, tx_id, 0x6040, 0x00, [0x07, 0x00], 0x2B)  # Switch on
     send_sdo(bus, tx_id, 0x6040, 0x00, [0x0F, 0x00], 0x2B)  # Enable operation
-
-    acc_bytes = int32_to_bytes(1000)
-    dec_bytes = int32_to_bytes(1000)
-    
-    send_sdo(bus, tx_id, 0x6083, 0x00, acc_bytes, 0x23)  # Acceleration
-    send_sdo(bus, tx_id, 0x6084, 0x00, dec_bytes, 0x23)  # Deceleration
 
 def set_operation_mode(bus, tx_id, mode):
     """Set the operation mode (e.g., 1=position, 3=speed, 4=torque)."""

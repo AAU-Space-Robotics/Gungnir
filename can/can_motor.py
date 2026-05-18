@@ -30,7 +30,7 @@ class Motor:
         | Example instruction  | Node id 0x600 + motor_id | Data length |  Index  | Sub-index |    Data bytes     |
         +======================+==========================+=============+====+====+===========+====+====+====+====+
         | Set speed to 100 RPM |            601           |     23h     | FF | 60 |     00    | 64 | 00 | 00 | 00 |
-        +---------------------0x68-+--------------------------+-------------+----+----+-----------+----+----+----+----+
+        +----------------------+--------------------------+-------------+----+----+-----------+----+----+----+----+
         Note: Data bytes and index are in little-endian format. FF60 = 0x60FF and 64 00 00 00 = 00 00 00 64 = 100.
         """
         data_bytes = [command_specifier, index & 0xFF, (index >> 8) & 0xFF, subindex] + data

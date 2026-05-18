@@ -1,6 +1,6 @@
 import can
 import time
-from canopen_helpers import enable_motor, set_operation_mode, set_target_speed, fault_reset
+from can.canopen_helpers import enable_motor, set_operation_mode, set_target_speed, fault_reset
 
 # Setup CAN interface (adjust channel and bitrate as needed)
 bus = can.interface.Bus(channel='can0', bustype='socketcan', bitrate=1000000)
@@ -39,24 +39,18 @@ set_operation_mode(bus, tx_id2, 3)
 set_target_speed(bus, tx_id2, 0)
 
 time.sleep(8)
-try:
-    while True:
+while True:
 
-        set_target_speed(bus, tx_id1, 400)
+    set_target_speed(bus, tx_id1, 4000)
 
 
-        set_target_speed(bus, tx_id2, -400)
-
-        time.sleep(3)
-
-        set_target_speed(bus, tx_id1, -400)
-
-        set_target_speed(bus, tx_id2, 400)
-
-        time.sleep(3)
-        
-except KeyboardInterrupt:
-    set_target_speed(bus, tx_id1, 0)
     set_target_speed(bus, tx_id2, 0)
-    print("Motors stopped. Exiting.")
+
+    time.sleep(2)
+
+    set_target_speed(bus, tx_id1, 0)
+
+    set_target_speed(bus, tx_id2, 4000)
+
+    time.sleep(2)
 
