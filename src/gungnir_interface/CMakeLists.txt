@@ -7,10 +7,12 @@ find_package(ament_cmake REQUIRED)
 find_package(pluginlib REQUIRED)
 find_package(hardware_interface REQUIRED)
 find_package(rcpputils REQUIRED)
+find_package(myactuator_rmd REQUIRED)
 
 add_library(gungnir_interface SHARED
   src/gungnir_interface.cpp
-  src/besfoc_driver.cpp
+  src/custom_drivers/amt21_encoder_driver.cpp
+  src/custom_drivers/besfoc_driver.cpp
 )
 
 add_executable(test_node src/test_node.cpp)
@@ -24,6 +26,8 @@ target_include_directories(test_node PUBLIC
   $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/include>
   $<INSTALL_INTERFACE:include>
 )
+
+target_link_libraries(gungnir_interface myactuator_rmd::myactuator_rmd)
 
 ament_target_dependencies(gungnir_interface
   rclcpp
@@ -51,6 +55,8 @@ ament_export_dependencies(
 )
 
 pluginlib_export_plugin_description_file(hardware_interface gungnir_interface.xml)
+
+
 
 install(TARGETS gungnir_interface
   ARCHIVE DESTINATION lib

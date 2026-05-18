@@ -65,7 +65,7 @@ int main(int argc, char ** argv)
   trajectory_point_msg.velocities.resize(chain.getNrOfJoints());
 
   double total_time = 3.0;
-  int trajectory_len = 200;
+  int trajectory_len = 500;
   double dt = total_time / static_cast<double>(trajectory_len - 1);
 
   for (int i = 0; i < trajectory_len; i++)
