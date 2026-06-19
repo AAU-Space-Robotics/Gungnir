@@ -40,16 +40,18 @@ CallbackReturn RobotSystem::on_init(const hardware_interface::HardwareInfo & inf
   RCLCPP_INFO(rclcpp::get_logger("RobotSystem"), "Initializing motors and encoders...");
 
   //Joint 2 motor(MyActuator RMD)
-  rmd_motors.emplace(1, myactuator_rmd::ActuatorInterface(*my_actuator_bus, MYACTUATOR_2_CAN_ID));
-  //Joint 4 motor and encoder(BesFoc and AMT21)
-
-  auto [besfoc_it, besfoc_inserted] = besfoc_motors.emplace(0, besfoc::CanMotor(BESFOC_4_CAN_ID, besfoc_bus));
+  auto [rmd_it, rmd_inserted] = rmd_motors.emplace(1, myactuator_rmd::ActuatorInterface(*my_actuator_bus, MYACTUATOR_2_CAN_ID));
+  rmd_it->second.setAcceleration(30000, myactuator_rmd::AccelerationType::VELOCITY_PLANNING_ACCELERATION);
+  rmd_it->second.setAcceleration(30000, myactuator_rmd::AccelerationType::VELOCITY_PLANNING_DECELERATION);
+  
+  //Joint 1 motor and encoder(BesFoc and AMT21)
+  auto [besfoc_it, besfoc_inserted] = besfoc_motors.emplace(0, besfoc::CanMotor(BESFOC_1_CAN_ID, besfoc_bus));
   (void)besfoc_inserted;
   besfoc_it->second.set_acceleration(10000); // Set acceleration to 1000 rpm/s
   besfoc_it->second.set_deceleration(10000); // Set deceleration to 1000 rpm/s
   besfoc_it->second.set_mode(besfoc::SPEED_MODE); // Set mode to velocity control
  
-  amt21_encoders.try_emplace(0, AMT21_4_NODE_ADDRESS, "/dev/ttyUSB0", 115200);
+  amt21_encoders.try_emplace(0, AMT21_4_NODE_ADDRESS, "/dev/ttyUSB0", 115200, true);
   auto encoder_it = amt21_encoders.find(0);
   encoder_it->second.setZero(); // Reset encoder at address 0x54
 
@@ -67,6 +69,23 @@ CallbackReturn RobotSystem::on_init(const hardware_interface::HardwareInfo & inf
     {
       joint_interfaces[interface.name].push_back(joint.name);
     }
+  }
+
+  return CallbackReturn::SUCCESS;
+}
+
+hardware_interface::CallbackReturn RobotSystem::on_deactivate(const rclcpp_lifecycle::State & /*previous_state*/)
+{
+  // Stop all motors when deactivating
+  for (auto & [joint_num, motor] : besfoc_motors)
+  {
+    motor.stop_motor();
+  }
+
+  for (auto & [joint_num, motor] : rmd_motors)
+  {
+    motor.stopMotor();
+    motor.shutdownMotor();
   }
 
   return CallbackReturn::SUCCESS;
@@ -161,7 +180,7 @@ return_type RobotSystem::write(const rclcpp::Time &, const rclcpp::Duration &)
     if(besfoc_it != besfoc_motors.end()) {
       // Send velocity command to the BesFoc motor
       double velocity_command = joint_velocities_command_[i];
-      int rpm_command = static_cast<int>(velocity_command * 60.0 * BESFOC_4_GEAR_RATIO/ (2.0 * M_PI)); // Convert rad/s to rpm at the motor shaft
+      int rpm_command = static_cast<int>(velocity_command * 60.0 * BESFOC_1_GEAR_RATIO/ (2.0 * M_PI)); // Convert rad/s to rpm at the motor shaft
 
       RCLCPP_INFO(rclcpp::get_logger("RobotSystem"), "Sending velocity commandf to motor for joint %zu: %d rpm", i, rpm_command);
       besfoc_it->second.set_velocity(static_cast<int>(rpm_command));

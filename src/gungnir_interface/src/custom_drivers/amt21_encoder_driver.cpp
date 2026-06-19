@@ -1,12 +1,14 @@
 #include "amt21_encoder_driver/amt21_encoder_driver.hpp"
 #include <thread>
 #include <chrono>
+#include <rclcpp/rclcpp.hpp>
 
 using namespace boost::asio;
 
-AMT21::AMT21(const u_int8_t nodeAddress, const std::string& port, unsigned int baud_rate)
+AMT21::AMT21(const u_int8_t nodeAddress, const std::string& port, unsigned int baud_rate, bool flipTurn)
     : io_context_(),
-        serial_(io_context_, port)
+        serial_(io_context_, port),
+        flip(flipTurn)
 {
     nodeAddress_ = nodeAddress;
     // Configure serial port
@@ -17,7 +19,17 @@ AMT21::AMT21(const u_int8_t nodeAddress, const std::string& port, unsigned int b
     serial_.set_option(serial_port_base::flow_control(serial_port_base::flow_control::none));
 }
 
-int AMT21::readPosition(bool useZeroOffset) {
+int AMT21::scaleZeroInMiddle(int raw) {
+    // Scale the raw value so that zero is in the middle of the range. This is useful for applications like steering where you want to be able to go equally in both directions from a central position.
+    int halfRange = MAX_VALUE / 2;
+    if(raw > halfRange) {
+        return (raw - MAX_VALUE); // Wrap around to negative values
+    } else {
+        return raw; // Keep as is for values in the lower half
+    };
+}
+
+int AMT21::readPosition(bool useZeroOffset, bool forceRaw) {
     // Send command
     write(serial_, buffer(&nodeAddress_, 1));
 
@@ -27,8 +39,7 @@ int AMT21::readPosition(bool useZeroOffset) {
     size_t bytesRead = readWithTimeout(response, 2, 500, ec); // 500ms timeout
 
     if (ec || bytesRead != 2) {
-        std::cerr << "Read error or timeout at address 0x" 
-                    << std::hex << (int)nodeAddress_ << "\n";
+        RCLCPP_ERROR(rclcpp::get_logger("AMT21"), "Read error or timeout at address 0x%02x", nodeAddress_);
         return -1;
     }
 
@@ -37,19 +48,70 @@ int AMT21::readPosition(bool useZeroOffset) {
 
     // Validate checksum
     if (!validateChecksum(raw)) {
-        std::cerr << "Checksum error at address 0x" 
-                    << std::hex << (int)nodeAddress_ << "\n";
+        RCLCPP_ERROR(rclcpp::get_logger("AMT21"), "Checksum error at address 0x%02x", nodeAddress_);
         return -1;
     }
 
     // Strip top 2 checksum bits
     uint16_t position = raw & 0x3FFF;
 
+    if(forceRaw) {
+        return position; // Return raw position without scaling
+    }
+
     if(useZeroOffset){
+        RCLCPP_INFO(rclcpp::get_logger("AMT21"), "Offset Applied");
         position = (position - zeroOffset_ + MAX_VALUE) % MAX_VALUE; // Apply zero offset and wrap around
     }
 
-    return position; // Convert to radians
+    if(flip) {
+        RCLCPP_INFO(rclcpp::get_logger("AMT21"), "Position before flip: %d", position);
+        position = MAX_VALUE - position; // Flip direction if needed
+    }
+
+    int scaledPosition = scaleZeroInMiddle(position);
+
+    return scaledPosition; // Convert to radians
+}
+
+int AMT21::readMultiTurnPosition(bool useZeroOffset) {
+
+    int singleTurnPos = readPosition(useZeroOffset);
+
+    u_int8_t cmd = nodeAddress_ + 0x01; // Command to read turn counter
+
+    // Send command
+    write(serial_, buffer(&cmd, 1));
+
+    // Read 2 byte response
+    uint8_t response[2];
+    boost::system::error_code ec;
+    size_t bytesRead = readWithTimeout(response, 2, 500, ec);
+
+    if(ec || bytesRead != 2) {
+        RCLCPP_ERROR(rclcpp::get_logger("AMT21"), "Read error or timeout for turn counter at address 0x%02x", nodeAddress_);
+        return -1;
+    }
+
+     // Combine bytes (low byte first)
+    uint16_t raw = (response[1] << 8) | response[0];
+
+    // Validate checksum
+    if (!validateChecksum(raw)) {
+        RCLCPP_ERROR(rclcpp::get_logger("AMT21"), "Checksum error at address 0x%02x", nodeAddress_);
+        return -1;
+    }
+
+    // Strip top 2 checksum bits
+    uint16_t turnCount = raw & 0x3FFF;
+
+    RCLCPP_DEBUG(rclcpp::get_logger("AMT21"), "Turn count: %d", turnCount);
+
+    // Calculate multi-turn position
+    int multiTurnPosition = turnCount * MAX_VALUE + singleTurnPos;
+
+    return multiTurnPosition;
+    // Not implemented yet
 }
 
 void AMT21::resetEncoder() {
@@ -58,7 +120,7 @@ void AMT21::resetEncoder() {
 }
 
 void AMT21::setZero() {
-    zeroOffset_ = readPosition(false);
+    zeroOffset_ = readPosition(false, true);
 }
 
 size_t AMT21::readWithTimeout(uint8_t* buf, size_t len, int timeout_ms, boost::system::error_code& ec) {

@@ -38,25 +38,35 @@ void test_velocity(besfoc::CanMotor& motor, AMT21& encoder){
     RCLCPP_INFO(rclcpp::get_logger("test_node"), "Motor Status: %s", state_str.c_str());
     
 }
+int test_encoder (AMT21& encoder){
+    while (true) {
+        int pos1 = encoder.readPosition(true); // encoder 1 default address
+
+        RCLCPP_INFO(rclcpp::get_logger("test_node"), "Encoder Position: %d", pos1);
+
+        rclcpp::sleep_for(std::chrono::milliseconds(10));
+    }
+}
 
 int main()
 {
     // Example usage of CanMotor class
 
-    AMT21 encoder(0x54, "/dev/ttyUSB0", 115200);
+    AMT21 encoder(0x54, "/dev/ttyUSB0", 115200, true);
 
     encoder.setZero(); // Reset encoder at address 0x54
 
-    auto bus = std::make_shared<CanBus>("can0");
-    bus->connect();
+    // auto bus = std::make_shared<CanBus>("can0");
+    // bus->connect();
 
-    besfoc::CanMotor motor4(0x68, bus);
-    RCLCPP_INFO(rclcpp::get_logger("test_node"), "CanBus connected successfully.");
+    // besfoc::CanMotor motor4(0x68, bus);
+    // RCLCPP_INFO(rclcpp::get_logger("test_node"), "CanBus connected successfully.");
 
     //test_relative_postion(motor4, encoder);
-    test_velocity(motor4, encoder);
+    //test_velocity(motor4, encoder);
+    test_encoder(encoder);
 
-    bus->disconnect();
+   // bus->disconnect();
 
     RCLCPP_INFO(rclcpp::get_logger("test_node"), "CanBus disconnected successfully.");
     

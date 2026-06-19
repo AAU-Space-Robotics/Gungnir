@@ -65,7 +65,7 @@ int main(int argc, char ** argv)
   trajectory_point_msg.velocities.resize(chain.getNrOfJoints());
 
   double total_time = 3.0;
-  int trajectory_len = 500;
+  int trajectory_len = 100;  // Reduced from 500 to avoid message size limits
   double dt = total_time / static_cast<double>(trajectory_len - 1);
 
   for (int i = 0; i < trajectory_len; i++)
@@ -118,7 +118,7 @@ int main(int argc, char ** argv)
 
   RCLCPP_INFO(
     node->get_logger(), "Publishing trajectory with length %ld", trajectory_msg.points.size());
-
+  
   pub->publish(trajectory_msg);
 
   rclcpp::spin(node);

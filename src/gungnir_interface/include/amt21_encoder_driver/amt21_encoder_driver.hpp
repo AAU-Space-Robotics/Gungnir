@@ -9,10 +9,12 @@ using namespace boost::asio;
 
 class AMT21 {
 public:
-    AMT21(const u_int8_t nodeAddress, const std::string& port, unsigned int baud_rate);
+    AMT21(const u_int8_t nodeAddress, const std::string& port, unsigned int baud_rate, bool flipTurn = false);
     // Read position from encoder at given node address
     // Returns -1 on error
-    int readPosition(bool useZeroOffset = true);
+    int readPosition(bool useZeroOffset = true, bool forceRaw = false);
+
+    int readMultiTurnPosition(bool useZeroOffset = true);
 
     // Reset encoder
     void resetEncoder();
@@ -28,11 +30,14 @@ private:
     io_context io_context_;
     serial_port serial_;
     int zeroOffset_ = 0; // For multi-turn encoders, store the zero offset to apply to readings
+    bool flip = false; // Whether to flip the direction of the encoder readings
 
     // Read with timeout in milliseconds
     size_t readWithTimeout(uint8_t* buf, size_t len, int timeout_ms, boost::system::error_code& ec);
 
     bool validateChecksum(uint16_t raw);
+
+    int scaleZeroInMiddle(int raw);
 };
 
 // int main() {
