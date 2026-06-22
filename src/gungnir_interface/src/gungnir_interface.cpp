@@ -51,7 +51,7 @@ CallbackReturn RobotSystem::on_init(const hardware_interface::HardwareInfo & inf
   besfoc_it->second.set_deceleration(10000); // Set deceleration to 1000 rpm/s
   besfoc_it->second.set_mode(besfoc::SPEED_MODE); // Set mode to velocity control
  
-  amt21_encoders.try_emplace(0, AMT21_4_NODE_ADDRESS, "/dev/ttyUSB0", 115200, true);
+  amt21_encoders.try_emplace(0, AMT21_1_NODE_ADDRESS, "/dev/ttyUSB0", 115200, true);
   auto encoder_it = amt21_encoders.find(0);
   encoder_it->second.setZero(); // Reset encoder at address 0x54
 
