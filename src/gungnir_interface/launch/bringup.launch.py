@@ -14,12 +14,16 @@ from launch.substitutions import Command, FindExecutable, PathJoinSubstitution
 
 from ament_index_python.packages import get_package_share_directory
 
+import os
+
 
 def generate_launch_description():
+    
+    os.system("sudo ip link set can0 up type can bitrate 1000000")
 
     # Get URDF
     urdf_folder = os.path.join(get_package_share_directory("gungnir_description"), "urdf")
-    urdf = os.path.join(urdf_folder, "gungnir.urdf")
+    urdf = os.path.join(urdf_folder, "robot.urdf.xacro")
     robot_description_values = ParameterValue(Command(['xacro ', urdf]), value_type=str)
     robot_description = {'robot_description': robot_description_values}
 
@@ -35,6 +39,7 @@ def generate_launch_description():
         package="controller_manager",
         executable="ros2_control_node",
         parameters=[
+            robot_description,
             controller_config,
         ],
         output="screen",
@@ -60,6 +65,7 @@ def generate_launch_description():
         output="both",
         parameters=[robot_description],
     )
+
     
     # Joint State Broadcaster
     joint_state_broadcaster = Node(
@@ -73,18 +79,19 @@ def generate_launch_description():
             "1000",
         ],
     )
-
+    
+    rviz = Node(
+        package="rviz2",
+        executable="rviz2",
+        name="rviz2",
+        output="screen",
+        arguments=["-d", os.path.join(get_package_share_directory("gungnir_description"), "rviz", "rviz_config.rviz")],
+    )
     ld = LaunchDescription()
-
-    ld.add_action(
-        DeclareLaunchArgument(
-            "argument_name",
-            default_value="some_value",
-            description="This is an example argument.",
-        ))
     
     ld.add_action(controller_manager_node)
     ld.add_action(spawn_joint_controller)
     ld.add_action(robot_state_publisher_node)
+    ld.add_action(rviz)
     ld.add_action(joint_state_broadcaster)
     return ld

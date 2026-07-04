@@ -26,9 +26,9 @@ def generate_launch_description():
             " ",
             PathJoinSubstitution(
                 [
-                    FindPackageShare("ros2_control_demo_example_7"),
+                    FindPackageShare("gungnir_description"),
                     "urdf",
-                    "r6bot.urdf.xacro",
+                    "robot.urdf.xacro",
                 ]
             ),
         ]

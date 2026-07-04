@@ -12,95 +12,45 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-#define _USE_MATH_DEFINES
-#include <cmath>
-
-#include <kdl/chainfksolverpos_recursive.hpp>
-#include <kdl/chainiksolvervel_pinv.hpp>
-#include <kdl/jntarray.hpp>
-#include <kdl/tree.hpp>
-#include <kdl_parser/kdl_parser.hpp>
 #include <rclcpp/rclcpp.hpp>
 #include <trajectory_msgs/msg/joint_trajectory.hpp>
 #include <trajectory_msgs/msg/joint_trajectory_point.hpp>
+
+#include <chrono>
+#include <vector>
+
+namespace
+{
+trajectory_msgs::msg::JointTrajectoryPoint make_point(
+  const std::vector<double> & positions,
+  const std::vector<double> & velocities,
+  const int sec,
+  const uint32_t nanosec = 0)
+{
+  trajectory_msgs::msg::JointTrajectoryPoint point;
+  point.positions = positions;
+  point.velocities = velocities;
+  point.time_from_start.sec = sec;
+  point.time_from_start.nanosec = nanosec;
+  return point;
+}
+}  // namespace
 
 int main(int argc, char ** argv)
 {
   rclcpp::init(argc, argv);
   auto node = std::make_shared<rclcpp::Node>("send_trajectory");
   auto pub = node->create_publisher<trajectory_msgs::msg::JointTrajectory>(
-    "/r6bot_controller/joint_trajectory", 10);
-
-  // get robot description
-  auto robot_param = rclcpp::Parameter();
-  node->declare_parameter("robot_description", rclcpp::ParameterType::PARAMETER_STRING);
-  node->get_parameter("robot_description", robot_param);
-  auto robot_description = robot_param.as_string();
-
-  // create kinematic chain
-  KDL::Tree robot_tree;
-  KDL::Chain chain;
-  kdl_parser::treeFromString(robot_description, robot_tree);
-  robot_tree.getChain("base_link", "tool0", chain);
-
-  auto joint_positions = KDL::JntArray(chain.getNrOfJoints());
-  auto joint_velocities = KDL::JntArray(chain.getNrOfJoints());
-  auto twist = KDL::Twist();
-  // create KDL solvers
-  auto ik_vel_solver_ = std::make_shared<KDL::ChainIkSolverVel_pinv>(chain, 0.0000001);
+    "/joint_trajectory_controller/joint_trajectory", 10);
 
   trajectory_msgs::msg::JointTrajectory trajectory_msg;
   trajectory_msg.header.stamp = node->now();
-  for (unsigned int i = 0; i < chain.getNrOfSegments(); i++)
-  {
-    auto joint = chain.getSegment(i).getJoint();
-    if (joint.getType() != KDL::Joint::Fixed)
-    {
-      trajectory_msg.joint_names.push_back(joint.getName());
-    }
-  }
+  trajectory_msg.joint_names = {"joint_1", "joint_2", "joint_3"};
 
-  trajectory_msgs::msg::JointTrajectoryPoint trajectory_point_msg;
-  trajectory_point_msg.positions.resize(chain.getNrOfJoints());
-  trajectory_point_msg.velocities.resize(chain.getNrOfJoints());
-
-  double total_time = 3.0;
-  int trajectory_len = 200;
-  double dt = total_time / static_cast<double>(trajectory_len - 1);
-
-  for (int i = 0; i < trajectory_len; i++)
-  {
-    // set endpoint twist
-    double t = i / (static_cast<double>(trajectory_len - 1));
-    twist.vel.x(2 * 0.3 * cos(2 * M_PI * t));
-    twist.vel.y(-0.3 * sin(2 * M_PI * t));
-
-    // convert cart to joint velocities
-    ik_vel_solver_->CartToJnt(joint_positions, twist, joint_velocities);
-
-    // copy to trajectory_point_msg
-    std::memcpy(
-      trajectory_point_msg.positions.data(), joint_positions.data.data(),
-      trajectory_point_msg.positions.size() * sizeof(double));
-    std::memcpy(
-      trajectory_point_msg.velocities.data(), joint_velocities.data.data(),
-      trajectory_point_msg.velocities.size() * sizeof(double));
-
-    // integrate joint velocities
-    joint_positions.data += joint_velocities.data * dt;
-
-    // set timing information
-    double time_point = total_time * t;
-    double time_point_sec = std::floor(time_point);
-    trajectory_point_msg.time_from_start.sec = static_cast<int>(time_point_sec);
-    trajectory_point_msg.time_from_start.nanosec =
-      static_cast<int>((time_point - time_point_sec) * 1E9);
-    trajectory_msg.points.push_back(trajectory_point_msg);
-  }
-
-  // send zero velocities in the end
-  auto & last_point_msg = trajectory_msg.points.back();
-  std::fill(last_point_msg.velocities.begin(), last_point_msg.velocities.end(), 0.0);
+  // Gentle 3-DoF profile: hold -> move slowly -> return slowly.
+  trajectory_msg.points.push_back(make_point({0.0, 0.0, 0.0}, {0.0, 0.0, 0.0}, 0));
+  trajectory_msg.points.push_back(make_point({0.2, -0.2, -0.4}, {0.0, 0.0, 0.0}, 3));
+  trajectory_msg.points.push_back(make_point({0.0, 0.0, 0.0}, {0.0, 0.0, 0.0}, 6));
 
   auto started = node->now();
   while (pub->get_subscription_count() == 0)
@@ -118,10 +68,10 @@ int main(int argc, char ** argv)
 
   RCLCPP_INFO(
     node->get_logger(), "Publishing trajectory with length %ld", trajectory_msg.points.size());
-
+  
   pub->publish(trajectory_msg);
 
-  rclcpp::spin(node);
+  rclcpp::sleep_for(std::chrono::milliseconds(500));
   rclcpp::shutdown();
 
   return 0;
