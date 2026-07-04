@@ -61,10 +61,10 @@ protected:
   const int BESFOC_1_GEAR_RATIO = 20*5.14; // Gear ratio for joint 4 (20:1 gearbox and 5.14:1 belt reduction)
   const int AMT21_1_NODE_ADDRESS = 0x54;
 
-  const int BESFOC_4_CAN_ID = 0x68; // Numeric value: 104
-  
   const int MYACTUATOR_2_CAN_ID = 0x02;
+  const int MYACTUATOR_3_CAN_ID = 0x03;
 
+  const int BESFOC_4_CAN_ID = 0x68; // Numeric value: 104
 
   //Create hardware maps for the motors and encoders. The keys are the joint numbers (starting at 0) and the values are the corresponding motor/encoder objects
   map<int, besfoc::CanMotor> besfoc_motors;

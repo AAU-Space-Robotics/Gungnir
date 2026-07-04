@@ -36,25 +36,34 @@ CallbackReturn RobotSystem::on_init(const hardware_interface::HardwareInfo & inf
 
   my_actuator_bus = new myactuator_rmd::CanDriver("can0");
 
-  //Add the motors and encoders to the hardware maps
+   //Add the motors and encoders to the hardware maps
   RCLCPP_INFO(rclcpp::get_logger("RobotSystem"), "Initializing motors and encoders...");
 
-  //Joint 2 motor(MyActuator RMD)
-  auto [rmd_it, rmd_inserted] = rmd_motors.emplace(1, myactuator_rmd::ActuatorInterface(*my_actuator_bus, MYACTUATOR_2_CAN_ID));
-  rmd_it->second.setAcceleration(30000, myactuator_rmd::AccelerationType::VELOCITY_PLANNING_ACCELERATION);
-  rmd_it->second.setAcceleration(30000, myactuator_rmd::AccelerationType::VELOCITY_PLANNING_DECELERATION);
+  RCLCPP_INFO(rclcpp::get_logger("RobotSystem"), "Initializing MyActuator motors for joint 2");
   
+  //Joint 2 motor(MyActuator RMD)
+  auto [rmd_it_2, rmd_inserted_2] = rmd_motors.emplace(1, myactuator_rmd::ActuatorInterface(*my_actuator_bus, MYACTUATOR_2_CAN_ID));
+  rmd_it_2->second.setAcceleration(30000, myactuator_rmd::AccelerationType::VELOCITY_PLANNING_ACCELERATION);
+  rmd_it_2->second.setAcceleration(30000, myactuator_rmd::AccelerationType::VELOCITY_PLANNING_DECELERATION);
+
+  RCLCPP_INFO(rclcpp::get_logger("RobotSystem"), "Initializing MyActuator motors for joint 3");
+  //Joint 3 motor(MyActuator RMD)
+  auto [rmd_it_3, rmd_inserted_3] = rmd_motors.emplace(2, myactuator_rmd::ActuatorInterface(*my_actuator_bus, MYACTUATOR_3_CAN_ID));
+  rmd_it_3->second.setAcceleration(30000, myactuator_rmd::AccelerationType::VELOCITY_PLANNING_ACCELERATION);
+  rmd_it_3->second.setAcceleration(30000, myactuator_rmd::AccelerationType::VELOCITY_PLANNING_DECELERATION);
+ 
+  RCLCPP_INFO(rclcpp::get_logger("RobotSystem"), "Initializing BesFoc motor and AMT21 encoder for joint 1...");
+
   //Joint 1 motor and encoder(BesFoc and AMT21)
   auto [besfoc_it, besfoc_inserted] = besfoc_motors.emplace(0, besfoc::CanMotor(BESFOC_1_CAN_ID, besfoc_bus));
   (void)besfoc_inserted;
   besfoc_it->second.set_acceleration(10000); // Set acceleration to 1000 rpm/s
   besfoc_it->second.set_deceleration(10000); // Set deceleration to 1000 rpm/s
   besfoc_it->second.set_mode(besfoc::SPEED_MODE); // Set mode to velocity control
- 
+
   amt21_encoders.try_emplace(0, AMT21_1_NODE_ADDRESS, "/dev/ttyUSB0", 115200, true);
   auto encoder_it = amt21_encoders.find(0);
   encoder_it->second.setZero(); // Reset encoder at address 0x54
-
 
   RCLCPP_INFO(rclcpp::get_logger("RobotSystem"), "Motors and encoders initialized successfully.");
 
