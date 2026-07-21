@@ -44,13 +44,13 @@ CallbackReturn RobotSystem::on_init(const hardware_interface::HardwareInfo & inf
   //Joint 2 motor(MyActuator RMD)
   auto [rmd_it_2, rmd_inserted_2] = rmd_motors.emplace(1, myactuator_rmd::ActuatorInterface(*my_actuator_bus, MYACTUATOR_2_CAN_ID));
   rmd_it_2->second.setAcceleration(30000, myactuator_rmd::AccelerationType::VELOCITY_PLANNING_ACCELERATION);
-  rmd_it_2->second.setAcceleration(30000, myactuator_rmd::AccelerationType::VELOCITY_PLANNING_DECELERATION);
+  rmd_it_2->second.setAcceleration(30000, myactuator_rmd::AccelerationType::VELOCITY_PLANNING_DECELERATION); // Should be setDeceleration?
 
   RCLCPP_INFO(rclcpp::get_logger("RobotSystem"), "Initializing MyActuator motors for joint 3");
   //Joint 3 motor(MyActuator RMD)
   auto [rmd_it_3, rmd_inserted_3] = rmd_motors.emplace(2, myactuator_rmd::ActuatorInterface(*my_actuator_bus, MYACTUATOR_3_CAN_ID));
   rmd_it_3->second.setAcceleration(30000, myactuator_rmd::AccelerationType::VELOCITY_PLANNING_ACCELERATION);
-  rmd_it_3->second.setAcceleration(30000, myactuator_rmd::AccelerationType::VELOCITY_PLANNING_DECELERATION);
+  rmd_it_3->second.setAcceleration(30000, myactuator_rmd::AccelerationType::VELOCITY_PLANNING_DECELERATION); // Should be setDeceleration?
  
   RCLCPP_INFO(rclcpp::get_logger("RobotSystem"), "Initializing BesFoc motor and AMT21 encoder for joint 1...");
 
