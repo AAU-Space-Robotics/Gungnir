@@ -40,6 +40,20 @@ Motion / MoveIt integration, planning and servo/MoveIt configuration (planners, 
 
 ## Usage
 
+### Docker container 
+
+The repository contains two docker containers:
+
+- `gungnir_arm` - Houses all software related to controlling the manipulator arm.
+- `zenoh-router` - Optional zenoh router for running the arm as standalone.
+
+Start each container in detaced mode with `docker compose`:
+```bash
+cd /home/gungnir/gungnir/docker
+docker compose up gungnir_arm -d
+```
+To see the output logs from the containter, simply remove `-d` to attach the container.
+
 ### Run Gungnir with a test trajectory
 
 #### Terminal 1: Start the Controller
