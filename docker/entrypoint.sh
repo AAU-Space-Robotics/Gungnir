@@ -12,4 +12,10 @@ echo " \    \_\  \  |  /   |  \/ /_/  >   |  \  ||  | \/ "
 echo "  \______  /____/|___|  /\___  /|___|  /__||__|    "
 echo "         \/           \//_____/      \/            "
 
-bash
+
+source /opt/ros/humble/setup.bash
+source /home/workspace/install/setup.bash
+
+ros2 run demo_nodes_cpp talker
+
+# bash

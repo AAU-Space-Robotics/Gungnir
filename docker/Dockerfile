@@ -70,7 +70,8 @@ RUN apt-get update && apt-get install -y \
   ros-humble-xacro \
   ros-humble-ros2-control \
   ros-humble-ros2-controllers \
-  ros-humble-rviz2
+  ros-humble-rviz2 \
+  ros-humble-demo-nodes-cpp
 
 # Clean up
 RUN rm -rf /var/lib/apt/lists/*

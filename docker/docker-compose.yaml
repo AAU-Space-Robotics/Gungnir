@@ -1,5 +1,3 @@
-version: "3.8"
-
 services:
   gungnir_arm:
     container_name: gungnir
@@ -8,38 +6,50 @@ services:
       - SYS_ADMIN
     devices:
       - /dev/net/tun
-      
     build:
       context: .
       dockerfile: Dockerfile
       args:
         USER_UID: ${UID}
         USER_GID: ${GID}
-    
     image: gungnir:latest
-
     privileged: true
     network_mode: host
-
+    restart: unless-stopped
     environment:
-      - DISPLAY=${DISPLAY}
+      - ROS_DOMAIN_ID=50
+      - RMW_IMPLEMENTATION=rmw_zenoh_cpp
       - QT_X11_NO_MITSHM=1
       - CAN_INTERFACE=can0
       - SHELL=/bin/bash
-
     volumes:
       - /tmp/.X11-unix:/tmp/.X11-unix:rw
       - ../:/home/ws
       - /dev:/dev
-
     stdin_open: true
     tty: true
 
-    command: >
-      bash -c "
-        source /opt/ros/humble/setup.bash &&
-        if [ -f /home/ros_workspace/install/setup.bash ]; then
-          source /home/ros_workspace/install/setup.bash;
-        fi &&
-        bash
-      "
+    # command: >
+    #   bash -c "
+    #     source /opt/ros/humble/setup.bash &&
+    #     if [ -f /home/ros_workspace/install/setup.bash ]; then
+    #       source /home/ros_workspace/install/setup.bash;
+    #     fi &&
+    #     bash
+    #   "
+
+  zenoh-router:
+    image: eclipse/zenoh:1.6.2
+    container_name: zenoh-router
+    network_mode: host
+    ports:
+      - "7447:7447"
+      - "7448:7448"
+      - "8000:8000"
+    command: ["--config", "/etc/zenoh/zenoh-router.json"]
+    volumes:
+      - ./config/zenoh/zenoh-router.json:/etc/zenoh/zenoh-router.json
+    restart: unless-stopped
+    environment:
+      - RUST_LOG=debug
+      # - ZENOH_CONFIG_OVERRIDE='connect/endpoints=["tcp/192.168.XX.XXX:7447"]' # Change to whatever the rover's ip is
