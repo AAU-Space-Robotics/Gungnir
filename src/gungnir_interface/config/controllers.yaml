@@ -1,17 +1,17 @@
 controller_manager:
   ros__parameters:
-    update_rate: 10  # Hz
+    update_rate: 10  # Controller update frequency in Hz
 
     joint_state_broadcaster:
-      type: joint_state_broadcaster/JointStateBroadcaster
+      type: joint_state_broadcaster/JointStateBroadcaster  # Publishes joint states
 
     joint_trajectory_controller:
-      type: joint_trajectory_controller/JointTrajectoryController
+      type: joint_trajectory_controller/JointTrajectoryController  # Executes trajectory commands
 
 
 joint_trajectory_controller:
   ros__parameters:
-    joints:
+    joints:  # Joints controlled by this trajectory controller
       - joint_1
       - joint_2
       - joint_3
@@ -19,19 +19,19 @@ joint_trajectory_controller:
       # - joint_5
       # - joint_6
 
-    command_interfaces:
+    command_interfaces:  # Command type sent to hardware
       - velocity
 
-    state_interfaces:
+    state_interfaces:  # Feedback data read from hardware
       - position
       - velocity
-    
-    action_monitor_rate: 20.0
-    allow_partial_joints_goal: false
-    allow_nonzero_velocity_at_trajectory_end: true
-    constraints:
-      stopped_velocity_tolerance: 0.02
-      goal_time: 0.0
+
+    action_monitor_rate: 20.0                       # How often action progress is checked
+    allow_partial_joints_goal: false                # Require all configured joints in the goal
+    allow_nonzero_velocity_at_trajectory_end: true  # Allow non-zero end velocity
+    constraints:                                    # Tracking and goal tolerances
+      stopped_velocity_tolerance: 0.02              # Velocity threshold for "stopped"
+      goal_time: 0.0                                # Allowed goal time tolerance
       joint_1: { trajectory: 0.5, goal: 0.02 }
       joint_2: { trajectory: 0.5, goal: 0.02 }
       joint_3: { trajectory: 0.5, goal: 0.02 }
@@ -39,8 +39,9 @@ joint_trajectory_controller:
       # joint_5: { trajectory: 0.5, goal: 0.02 }
       # joint_6: { trajectory: 0.5, goal: 0.02 }
 
-    gains:
-      joint_1: {p: 3.0, d: 0.3, ff_velocity_scale: 1.0}
+    gains:  # Control tuning for each joint
+      # {Proportional gain, derivative gain, feed-forward velocity}
+      joint_1: {p: 3.0, d: 0.3, ff_velocity_scale: 1.0}  
       joint_2: {p: 3.0, d: 0.7, ff_velocity_scale: 1.0}
       joint_3: {p: 3.0, d: 0.7, ff_velocity_scale: 1.0}
       # joint_4: {p: 1.0, d: 1.0, ff_velocity_scale: 1.0}

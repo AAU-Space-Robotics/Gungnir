@@ -4,7 +4,7 @@
 # \    \_\  \  |  /   |  \/ /_/  >   |  \  ||  | \/ #
 #  \______  /____/|___|  /\___  /|___|  /__||__|    #
 #         \/           \//_____/      \/            #
-FROM ros:humble
+FROM ros:humble AS base
 
 # Setup user
 ARG USERNAME=gungnir
@@ -83,7 +83,11 @@ RUN rm -rf /var/lib/apt/lists/*
 # Create workspace directory
 RUN mkdir -p /home/ws && chown $USERNAME:$USERNAME /home/ws
 
-COPY entrypoint.sh /entrypoint.sh
+COPY src/ /home/ws/src
+
+FROM base AS dev
+
+COPY docker/entrypoints/dev.sh /entrypoint.sh
 RUN chmod +x /entrypoint.sh
 
 # Switch to non-root user
@@ -91,6 +95,23 @@ USER $USERNAME
 
 # Set working directory
 WORKDIR /home/ws
+
+ENTRYPOINT ["/entrypoint.sh"]
+
+
+FROM base AS prod
+
+COPY docker/entrypoints/gungnir.sh /entrypoint.sh
+RUN chmod +x /entrypoint.sh
+
+# Switch to non-root user
+USER $USERNAME
+
+# Set working directory
+WORKDIR /home/ws
+
+RUN /bin/bash -c "source /opt/ros/humble/setup.bash && \
+                  colcon build"
 
 ENTRYPOINT ["/entrypoint.sh"]
 # Enjoy ;)

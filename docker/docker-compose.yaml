@@ -7,13 +7,16 @@ services:
     devices:
       - /dev/net/tun
     build:
-      context: .
-      dockerfile: Dockerfile
+      context: ..
+      dockerfile: docker/Dockerfile
+      target: prod
       args:
         USER_UID: ${UID}
         USER_GID: ${GID}
     image: gungnir:latest
     privileged: true
+    group_add:
+      - dialout
     network_mode: host
     restart: unless-stopped
     environment:
@@ -24,7 +27,40 @@ services:
       - SHELL=/bin/bash
     volumes:
       - /tmp/.X11-unix:/tmp/.X11-unix:rw
-      - ../:/home/ws
+      # - ../:/home/ws
+      - /dev:/dev
+    stdin_open: true
+    tty: true
+
+  gungnir_dev:
+    container_name: gungnir_dev
+    cap_add:
+      - NET_ADMIN
+      - SYS_ADMIN
+    devices:
+      - /dev/net/tun
+    build:
+      context: ..
+      dockerfile: docker/Dockerfile
+      target: dev
+      args:
+        USER_UID: ${UID}
+        USER_GID: ${GID}
+    image: gungnir_dev:latest
+    privileged: true
+    group_add:
+      - dialout
+    network_mode: host
+    restart: unless-stopped
+    environment:
+      - ROS_DOMAIN_ID=50
+      - RMW_IMPLEMENTATION=rmw_zenoh_cpp
+      - QT_X11_NO_MITSHM=1
+      - CAN_INTERFACE=can0
+      - SHELL=/bin/bash
+    volumes:
+      - /tmp/.X11-unix:/tmp/.X11-unix:rw
+      # - ../:/home/ws
       - /dev:/dev
     stdin_open: true
     tty: true
