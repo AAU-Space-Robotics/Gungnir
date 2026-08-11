@@ -16,15 +16,15 @@ To CAN or not to CAN
 ## Packages
 ### gungnir_controller
 [[gungnir_controller README]](src/gungnir_controller/README.md)\
-Robot model, URDF/Xacro, meshes, joint limits, SRDF and visualization assets.
+Motion / MoveIt integration, planning, joystick teleoperation and Servo configuration.
 
 ### gungnir_description
 [[gungnir_description README]](src/gungnir_description/README.md)\
-hardware/system interface (CAN, motors, encoders, drivers). Exposes a ros2_control System plugin (`gungnir::RobotSystem`) used by `ros2_control_node`.
+Robot model, URDF/Xacro, meshes, joint limits, SRDF and visualization assets.
 
 ### gungnir_interface
 [[gungnir_interface README]](src/gungnir_interface/README.md)\
-Motion / MoveIt integration, planning and servo/MoveIt configuration (planners, kinematics, MoveIt servo config).
+Hardware/system interface (CAN, motors, encoders and drivers). Exposes the ros2_control System plugin (`gungnir::RobotSystem`) used by `ros2_control_node`.
 
 ## Important nodes
 - `ros2_control_node` (from `controller_manager`): loads the robot_description (URDF + ros2_control block) and the hardware plugin; manages controllers. Launched by:
@@ -64,6 +64,20 @@ ros2 launch gungnir_interface bringup.launch.py
 ```bash
 ros2 launch ros2_control_demo_example_7 send_trajectory.launch.py 
 ```
+
+### Control Gungnir with a joystick
+
+Start the hardware controller as above. In a second terminal, connect an
+Xbox-compatible controller and launch MoveIt Servo:
+
+```bash
+source install/setup.bash
+ros2 launch gungnir_controller servo.launch.py
+```
+
+Hold the left bumper while moving the sticks. See the
+[controller README](src/gungnir_controller/README.md) for the mapping, safety
+behavior, configuration, and diagnostics.
 
 
 <!-- 

@@ -66,10 +66,12 @@ RUN git clone https://github.com/2b-t/myactuator_rmd.git \
   && pip3 install .
 
 # Other ROS packages
-RUN apt-get update && apt-get install -y \ 
+RUN apt-get update && apt-get install -y \
   ros-humble-xacro \
   ros-humble-ros2-control \
   ros-humble-ros2-controllers \
+  ros-humble-joy \
+  ros-humble-moveit \
   ros-humble-rviz2 \
   ros-humble-demo-nodes-cpp
 

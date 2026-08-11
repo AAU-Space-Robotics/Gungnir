@@ -1,0 +1,30 @@
+joy_node:
+  ros__parameters:
+    deadzone: 0.05
+    autorepeat_rate: 30.0
+    coalesce_interval_ms: 1
+
+joystick_servo:
+  ros__parameters:
+    # Xbox-compatible Linux mapping. Hold the left bumper while commanding motion.
+    deadman_button: 4
+    deadzone: 0.1
+    command_frame: base_link
+    auto_start_servo: true
+
+    # Servo is configured for unitless input, so these values must remain in [-1, 1].
+    linear_x.axis: 1
+    linear_x.scale: 1.0
+    linear_y.axis: 0
+    linear_y.scale: 1.0
+    linear_z.axis: 4
+    linear_z.scale: 1.0
+
+    # A 3-DOF arm cannot independently control all six Cartesian dimensions, so
+    # orientation commands are disabled until the wrist joints are implemented.
+    angular_x.axis: -1
+    angular_x.scale: 0.0
+    angular_y.axis: -1
+    angular_y.scale: 0.0
+    angular_z.axis: -1
+    angular_z.scale: 0.0
