@@ -37,6 +37,13 @@
       mesh_package="gungnir_description"
       mesh_name="link_3"
   />
+
+  <!--
+    Cartesian tool point for the currently implemented 3-DOF arm.  link_3's
+    frame is located on the joint_3 axis, so using link_3 itself as Servo's
+    end-effector would give joint_3 no translational leverage.
+  -->
+  <link name="ee_link"/>
 <!-- 
   <xacro:create_link
       link_name="link_4"
@@ -95,6 +102,12 @@
     <origin xyz="0 ${-upperarm_length} 0" rpy="0 ${pi} ${pi}"/>
     <axis xyz="0 0 1"/>
     <limit effort="1000.0" lower="${-pi}" upper="${pi}" velocity="2.5"/>
+  </joint>
+
+  <joint name="ee_fixed_joint" type="fixed">
+    <parent link="link_3"/>
+    <child link="ee_link"/>
+    <origin xyz="0.519 0 0" rpy="0 0 0"/>
   </joint>
 
   <!-- 

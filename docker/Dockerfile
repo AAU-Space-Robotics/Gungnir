@@ -72,6 +72,8 @@ RUN apt-get update && apt-get install -y \
   ros-humble-ros2-controllers \
   ros-humble-joy \
   ros-humble-moveit \
+  ros-humble-moveit-kinematics \
+  ros-humble-moveit-servo \
   ros-humble-rviz2 \
   ros-humble-demo-nodes-cpp
 

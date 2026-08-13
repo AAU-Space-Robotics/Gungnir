@@ -8,8 +8,10 @@
 #include <string>
 
 #include "geometry_msgs/msg/twist_stamped.hpp"
+#include "moveit_msgs/srv/change_control_dimensions.hpp"
 #include "rclcpp/rclcpp.hpp"
 #include "sensor_msgs/msg/joy.hpp"
+#include "std_msgs/msg/int8.hpp"
 #include "std_srvs/srv/trigger.hpp"
 
 using namespace std::chrono_literals;
@@ -29,6 +31,10 @@ public:
     command_frame_ = declare_parameter<std::string>("command_frame", "base_link");
     servo_start_service_ =
       declare_parameter<std::string>("servo_start_service", "/servo_node/start_servo");
+    const auto control_dimensions_service = declare_parameter<std::string>(
+      "control_dimensions_service", "/servo_node/change_control_dimensions");
+    const auto status_topic =
+      declare_parameter<std::string>("status_topic", "/servo_node/status");
 
     deadman_button_ = declare_parameter<std::int64_t>("deadman_button", 4);
     deadzone_ = declare_parameter<double>("deadzone", 0.1);
@@ -53,9 +59,14 @@ public:
     joy_sub_ = create_subscription<sensor_msgs::msg::Joy>(
       joy_topic, rclcpp::SensorDataQoS(),
       std::bind(&JoystickServo::joy_callback, this, std::placeholders::_1));
+    status_sub_ = create_subscription<std_msgs::msg::Int8>(
+      status_topic, rclcpp::SystemDefaultsQoS(),
+      std::bind(&JoystickServo::status_callback, this, std::placeholders::_1));
 
     if (auto_start_servo_) {
       servo_start_client_ = create_client<std_srvs::srv::Trigger>(servo_start_service_);
+      control_dimensions_client_ =
+        create_client<moveit_msgs::srv::ChangeControlDimensions>(control_dimensions_service);
       start_timer_ = create_wall_timer(500ms, std::bind(&JoystickServo::try_start_servo, this));
     }
 
@@ -100,6 +111,13 @@ private:
 
   void joy_callback(const sensor_msgs::msg::Joy::ConstSharedPtr joy)
   {
+    if (!received_joy_) {
+      received_joy_ = true;
+      RCLCPP_INFO(
+        get_logger(), "Receiving joystick data with %zu axes and %zu buttons",
+        joy->axes.size(), joy->buttons.size());
+    }
+
     if (static_cast<std::size_t>(deadman_button_) >= joy->buttons.size()) {
       RCLCPP_ERROR_THROTTLE(
         get_logger(), *get_clock(), 5000,
@@ -128,6 +146,32 @@ private:
     deadman_was_pressed_ = true;
   }
 
+  void status_callback(const std_msgs::msg::Int8::ConstSharedPtr status)
+  {
+    if (status->data == last_servo_status_) {
+      return;
+    }
+    last_servo_status_ = status->data;
+
+    const char * description = "unknown status";
+    switch (status->data) {
+      case 0: description = "ready"; break;
+      case 1: description = "approaching singularity; decelerating"; break;
+      case 2: description = "halted at singularity"; break;
+      case 3: description = "approaching collision; decelerating"; break;
+      case 4: description = "halted for collision"; break;
+      case 5: description = "halted at joint bound"; break;
+      case 6: description = "leaving singularity; decelerating"; break;
+      default: break;
+    }
+
+    if (status->data == 0) {
+      RCLCPP_INFO(get_logger(), "MoveIt Servo status: %d (%s)", status->data, description);
+    } else {
+      RCLCPP_WARN(get_logger(), "MoveIt Servo status: %d (%s)", status->data, description);
+    }
+  }
+
   void publish_zero_if_needed()
   {
     if (!deadman_was_pressed_) {
@@ -143,6 +187,10 @@ private:
 
   void try_start_servo()
   {
+    if (servo_started_ && !control_dimensions_configured_) {
+      try_configure_control_dimensions();
+      return;
+    }
     if (servo_started_ || start_request_pending_ || !servo_start_client_->service_is_ready()) {
       return;
     }
@@ -156,7 +204,6 @@ private:
         const auto response = future.get();
         if (response->success) {
           servo_started_ = true;
-          start_timer_->cancel();
           RCLCPP_INFO(get_logger(), "MoveIt Servo started");
         } else {
           RCLCPP_WARN(get_logger(), "MoveIt Servo did not start: %s", response->message.c_str());
@@ -164,9 +211,40 @@ private:
       });
   }
 
+  void try_configure_control_dimensions()
+  {
+    if (control_dimensions_request_pending_ || !control_dimensions_client_->service_is_ready()) {
+      return;
+    }
+
+    control_dimensions_request_pending_ = true;
+    auto request = std::make_shared<moveit_msgs::srv::ChangeControlDimensions::Request>();
+    request->control_x_translation = true;
+    request->control_y_translation = true;
+    request->control_z_translation = true;
+    request->control_x_rotation = false;
+    request->control_y_rotation = false;
+    request->control_z_rotation = false;
+    control_dimensions_client_->async_send_request(
+      request,
+      [this](rclcpp::Client<moveit_msgs::srv::ChangeControlDimensions>::SharedFuture future) {
+        control_dimensions_request_pending_ = false;
+        if (future.get()->success) {
+          control_dimensions_configured_ = true;
+          start_timer_->cancel();
+          RCLCPP_INFO(get_logger(), "MoveIt Servo configured for X/Y/Z translation only");
+        } else {
+          RCLCPP_WARN(get_logger(), "MoveIt Servo rejected the Cartesian dimension configuration");
+        }
+      });
+  }
+
   rclcpp::Subscription<sensor_msgs::msg::Joy>::SharedPtr joy_sub_;
+  rclcpp::Subscription<std_msgs::msg::Int8>::SharedPtr status_sub_;
   rclcpp::Publisher<geometry_msgs::msg::TwistStamped>::SharedPtr twist_pub_;
   rclcpp::Client<std_srvs::srv::Trigger>::SharedPtr servo_start_client_;
+  rclcpp::Client<moveit_msgs::srv::ChangeControlDimensions>::SharedPtr
+    control_dimensions_client_;
   rclcpp::TimerBase::SharedPtr start_timer_;
 
   std::string command_frame_;
@@ -176,7 +254,11 @@ private:
   bool auto_start_servo_;
   bool deadman_was_pressed_{ false };
   bool start_request_pending_{ false };
+  bool control_dimensions_request_pending_{ false };
   bool servo_started_{ false };
+  bool control_dimensions_configured_{ false };
+  bool received_joy_{ false };
+  std::int8_t last_servo_status_{ -127 };
   AxisMapping linear_x_;
   AxisMapping linear_y_;
   AxisMapping linear_z_;
