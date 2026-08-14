@@ -1,7 +1,7 @@
 controller_manager:
   ros__parameters:
-    # Match MoveIt Servo's ~29 Hz output so its short trajectory points are
-    # processed before they expire.
+    # Run faster than MoveIt Servo (10 Hz) so each short trajectory is sampled
+    # several times instead of being replaced before interpolation advances.
     update_rate: 30
 
     joint_state_broadcaster:

@@ -16,7 +16,10 @@ scale:
 # override_velocity_scaling_factor = 0.0 # valid range [0.0:1.0]
 
 ## Properties of outgoing commands
-publish_period: 0.033333  # 30 Hz, matched by controller_manager.update_rate
+# Keep Servo slower than ros2_control. Servo emits a single point one period in
+# the future; the trajectory controller needs several update cycles to
+# interpolate toward it instead of replacing it at the start of every cycle.
+publish_period: 0.1  # 10 Hz Servo output, sampled by the 30 Hz controller
 low_latency_mode: false  # Set this to true to publish as soon as an incoming Twist command is received (publish_period is ignored)
 
 # What type of topic does your robot driver expect?
@@ -46,7 +49,7 @@ ee_frame_name: ee_link  # Fixed tool point beyond joint 3, at the end of the phy
 robot_link_command_frame:  base_link  # commands must be given in the frame of a robot link. Usually either the base or end effector
 
 ## Stopping behaviour
-incoming_command_timeout:  0.1  # Stop servoing if X seconds elapse without a new command
+incoming_command_timeout:  0.2  # Stop if joystick commands cease; longer than one Servo period
 # If 0, republish commands forever even if the robot is stationary. Otherwise, specify num. to publish.
 # Important because ROS may drop some messages and we need the robot to halt reliably.
 num_outgoing_halt_msgs_to_publish: 4
