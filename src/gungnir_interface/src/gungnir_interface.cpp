@@ -67,10 +67,10 @@ CallbackReturn RobotSystem::on_init(const hardware_interface::HardwareInfo & inf
 
   RCLCPP_INFO(rclcpp::get_logger("RobotSystem"), "Motors and encoders initialized successfully.");
 
-  // // robot has 6 joints and 2 interfaces
-  joint_position_.assign(6, 0);
-  joint_velocities_.assign(6, 0);
-  joint_velocities_command_.assign(6, 0);
+  const auto joint_count = info_.joints.size();
+  joint_position_.assign(joint_count, 0);
+  joint_velocities_.assign(joint_count, 0);
+  joint_velocities_command_.assign(joint_count, 0);
 
   for (const auto & joint : info_.joints)
   {
@@ -152,7 +152,7 @@ return_type RobotSystem::read(const rclcpp::Time & /*time*/, const rclcpp::Durat
       int raw_position = encoder_it->second.readPosition();
       double radian_position = (static_cast<double>(raw_position) / AMT21::MAX_VALUE) * 2 * M_PI; // Convert raw position to radians
       
-      RCLCPP_INFO(rclcpp::get_logger("RobotSystem"), "Read position from encoder for joint %zu: %d (raw), %f (radians)", i, raw_position, radian_position);
+      RCLCPP_DEBUG(rclcpp::get_logger("RobotSystem"), "Read position from encoder for joint %zu: %d (raw), %f (radians)", i, raw_position, radian_position);
   
       joint_velocities_[i] = (radian_position - joint_position_[i]) / period.seconds(); // Calculate velocity based on change in position over time
       joint_position_[i] = radian_position; // Update position
@@ -162,14 +162,14 @@ return_type RobotSystem::read(const rclcpp::Time & /*time*/, const rclcpp::Durat
       double position = (my_actuator_it->second.getMultiTurnAngle()) * M_PI / 180.0; // Convert degrees to radians
       double velocity = (position - joint_position_[i]) / period.seconds(); // Calculate velocity based on change in position over time
 
-      RCLCPP_INFO(rclcpp::get_logger("RobotSystem"), "Read position and velocity from MyActuator for joint %zu: %f (position), %f (velocity)", i, position, velocity);
+      RCLCPP_DEBUG(rclcpp::get_logger("RobotSystem"), "Read position and velocity from MyActuator for joint %zu: %f (position), %f (velocity)", i, position, velocity);
       
       joint_position_[i] = position;
       joint_velocities_[i] = velocity;
 
     }else {
       //If no hardware is associated with this joint
-      RCLCPP_INFO(rclcpp::get_logger("RobotSystem"), "Current velocity command for joint %zu: %f", i, joint_velocities_command_[i]);
+      RCLCPP_DEBUG(rclcpp::get_logger("RobotSystem"), "Current velocity command for joint %zu: %f", i, joint_velocities_command_[i]);
       
       joint_velocities_[i] = joint_velocities_command_[i];
       joint_position_[i] += joint_velocities_command_[i] * period.seconds();
@@ -191,13 +191,13 @@ return_type RobotSystem::write(const rclcpp::Time &, const rclcpp::Duration &)
       double velocity_command = joint_velocities_command_[i];
       int rpm_command = static_cast<int>(velocity_command * 60.0 * BESFOC_1_GEAR_RATIO/ (2.0 * M_PI)); // Convert rad/s to rpm at the motor shaft
 
-      RCLCPP_INFO(rclcpp::get_logger("RobotSystem"), "Sending velocity commandf to motor for joint %zu: %d rpm", i, rpm_command);
+      RCLCPP_DEBUG(rclcpp::get_logger("RobotSystem"), "Sending velocity command to motor for joint %zu: %d rpm", i, rpm_command);
       besfoc_it->second.set_velocity(static_cast<int>(rpm_command));
     }else if(my_actuator_it != rmd_motors.end()) {
       // Send velocity command to the MyActuator RMD motor
       double velocity_command = (joint_velocities_command_[i]) * (180.0 / M_PI); // Convert rad/s to degrees/s
 
-      RCLCPP_INFO(rclcpp::get_logger("RobotSystem"), "Sending velocity command to MyActuator for joint %zu: %f rpm", i, velocity_command);
+      RCLCPP_DEBUG(rclcpp::get_logger("RobotSystem"), "Sending velocity command to MyActuator for joint %zu: %f deg/s", i, velocity_command);
       my_actuator_it->second.sendVelocitySetpoint(velocity_command);
     }
   }

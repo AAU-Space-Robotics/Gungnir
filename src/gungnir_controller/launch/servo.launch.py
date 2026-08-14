@@ -39,11 +39,6 @@ def generate_launch_description():
             "robot_description_semantic": file.read()
         }
 
-    robot_description_kinematics = {
-        "robot_description_kinematics": load_yaml(
-            "gungnir_controller", "config/kinematics.yaml"
-        )
-    }
     servo_params = {
         "moveit_servo": load_yaml(
             "gungnir_controller", "config/gungnir_config.yaml"
@@ -59,7 +54,6 @@ def generate_launch_description():
             servo_params,
             robot_description,
             robot_description_semantic,
-            robot_description_kinematics,
         ],
     )
 

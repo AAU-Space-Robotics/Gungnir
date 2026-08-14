@@ -9,6 +9,7 @@
 
 #include "geometry_msgs/msg/twist_stamped.hpp"
 #include "moveit_msgs/srv/change_control_dimensions.hpp"
+#include "moveit_msgs/srv/change_drift_dimensions.hpp"
 #include "rclcpp/rclcpp.hpp"
 #include "sensor_msgs/msg/joy.hpp"
 #include "std_msgs/msg/int8.hpp"
@@ -33,6 +34,8 @@ public:
       declare_parameter<std::string>("servo_start_service", "/servo_node/start_servo");
     const auto control_dimensions_service = declare_parameter<std::string>(
       "control_dimensions_service", "/servo_node/change_control_dimensions");
+    const auto drift_dimensions_service = declare_parameter<std::string>(
+      "drift_dimensions_service", "/servo_node/change_drift_dimensions");
     const auto status_topic =
       declare_parameter<std::string>("status_topic", "/servo_node/status");
 
@@ -67,6 +70,8 @@ public:
       servo_start_client_ = create_client<std_srvs::srv::Trigger>(servo_start_service_);
       control_dimensions_client_ =
         create_client<moveit_msgs::srv::ChangeControlDimensions>(control_dimensions_service);
+      drift_dimensions_client_ =
+        create_client<moveit_msgs::srv::ChangeDriftDimensions>(drift_dimensions_service);
       start_timer_ = create_wall_timer(500ms, std::bind(&JoystickServo::try_start_servo, this));
     }
 
@@ -187,6 +192,10 @@ private:
 
   void try_start_servo()
   {
+    if (control_dimensions_configured_ && !drift_dimensions_configured_) {
+      try_configure_drift_dimensions();
+      return;
+    }
     if (servo_started_ && !control_dimensions_configured_) {
       try_configure_control_dimensions();
       return;
@@ -231,10 +240,40 @@ private:
         control_dimensions_request_pending_ = false;
         if (future.get()->success) {
           control_dimensions_configured_ = true;
-          start_timer_->cancel();
           RCLCPP_INFO(get_logger(), "MoveIt Servo configured for X/Y/Z translation only");
         } else {
           RCLCPP_WARN(get_logger(), "MoveIt Servo rejected the Cartesian dimension configuration");
+        }
+      });
+  }
+
+  void try_configure_drift_dimensions()
+  {
+    if (drift_dimensions_request_pending_ || !drift_dimensions_client_->service_is_ready()) {
+      return;
+    }
+
+    drift_dimensions_request_pending_ = true;
+    auto request = std::make_shared<moveit_msgs::srv::ChangeDriftDimensions::Request>();
+    request->drift_x_translation = false;
+    request->drift_y_translation = false;
+    request->drift_z_translation = false;
+    request->drift_x_rotation = true;
+    request->drift_y_rotation = true;
+    request->drift_z_rotation = true;
+    request->transform_jog_frame_to_drift_frame.rotation.w = 1.0;
+    drift_dimensions_client_->async_send_request(
+      request,
+      [this](rclcpp::Client<moveit_msgs::srv::ChangeDriftDimensions>::SharedFuture future) {
+        drift_dimensions_request_pending_ = false;
+        if (future.get()->success) {
+          drift_dimensions_configured_ = true;
+          start_timer_->cancel();
+          RCLCPP_INFO(
+            get_logger(),
+            "MoveIt Servo configured to let unsupported orientation dimensions drift");
+        } else {
+          RCLCPP_WARN(get_logger(), "MoveIt Servo rejected the drift dimension configuration");
         }
       });
   }
@@ -245,6 +284,7 @@ private:
   rclcpp::Client<std_srvs::srv::Trigger>::SharedPtr servo_start_client_;
   rclcpp::Client<moveit_msgs::srv::ChangeControlDimensions>::SharedPtr
     control_dimensions_client_;
+  rclcpp::Client<moveit_msgs::srv::ChangeDriftDimensions>::SharedPtr drift_dimensions_client_;
   rclcpp::TimerBase::SharedPtr start_timer_;
 
   std::string command_frame_;
@@ -255,8 +295,10 @@ private:
   bool deadman_was_pressed_{ false };
   bool start_request_pending_{ false };
   bool control_dimensions_request_pending_{ false };
+  bool drift_dimensions_request_pending_{ false };
   bool servo_started_{ false };
   bool control_dimensions_configured_{ false };
+  bool drift_dimensions_configured_{ false };
   bool received_joy_{ false };
   std::int8_t last_servo_status_{ -127 };
   AxisMapping linear_x_;

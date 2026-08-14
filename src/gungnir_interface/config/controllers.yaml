@@ -1,6 +1,8 @@
 controller_manager:
   ros__parameters:
-    update_rate: 10  # Controller update frequency in Hz
+    # Match MoveIt Servo's ~29 Hz output so its short trajectory points are
+    # processed before they expire.
+    update_rate: 30
 
     joint_state_broadcaster:
       type: joint_state_broadcaster/JointStateBroadcaster  # Publishes joint states
