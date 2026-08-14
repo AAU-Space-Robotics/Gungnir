@@ -58,20 +58,20 @@ def generate_launch_description():
     )
 
     joystick_config = os.path.join(controller_share, "config", "joystick.yaml")
-    joy_node = Node(
-        package="joy",
-        executable="joy_node",
-        name="joy_node",
-        output="screen",
-        parameters=[
-            joystick_config,
-            {
-                "dev": ParameterValue(
-                    LaunchConfiguration("joy_dev"), value_type=str
-                )
-            },
-        ],
-    )
+    # joy_node = Node(
+    #     package="joy",
+    #     executable="joy_node",
+    #     name="joy_node",
+    #     output="screen",
+    #     parameters=[
+    #         joystick_config,
+    #         {
+    #             "dev": ParameterValue(
+    #                 LaunchConfiguration("joy_dev"), value_type=str
+    #             )
+    #         },
+    #     ],
+    # )
     joystick_servo_node = Node(
         package="gungnir_controller",
         executable="joystick_servo",
@@ -103,7 +103,7 @@ def generate_launch_description():
                 description="Start another RViz instance with the Servo nodes",
             ),
             servo_node,
-            joy_node,
+            # joy_node,
             joystick_servo_node,
             rviz_node,
         ]

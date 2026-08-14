@@ -9,7 +9,7 @@ joystick_servo:
     # Xbox-compatible Linux mapping. Hold the left bumper while commanding motion.
     deadman_button: 4
     deadzone: 0.1
-    command_frame: base_link
+    command_frame: link_1
     auto_start_servo: true
 
     # Servo is configured for unitless input, so these values must remain in [-1, 1].

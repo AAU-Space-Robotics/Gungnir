@@ -46,7 +46,7 @@ planning_frame: base_link  # The MoveIt planning frame. Often 'base_link' or 'wo
 
 ## Other frames
 ee_frame_name: ee_link  # Fixed tool point beyond joint 3, at the end of the physical link
-robot_link_command_frame:  base_link  # commands must be given in the frame of a robot link. Usually either the base or end effector
+robot_link_command_frame:  link_1  # Interpret Cartesian joystick commands in the rotating shoulder frame
 
 ## Stopping behaviour
 incoming_command_timeout:  0.2  # Stop if joystick commands cease; longer than one Servo period

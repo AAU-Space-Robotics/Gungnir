@@ -29,7 +29,7 @@ public:
     const auto joy_topic = declare_parameter<std::string>("joy_topic", "/joy");
     const auto twist_topic =
       declare_parameter<std::string>("twist_topic", "/servo_node/delta_twist_cmds");
-    command_frame_ = declare_parameter<std::string>("command_frame", "base_link");
+    command_frame_ = declare_parameter<std::string>("command_frame", "link_1");
     servo_start_service_ =
       declare_parameter<std::string>("servo_start_service", "/servo_node/start_servo");
     const auto control_dimensions_service = declare_parameter<std::string>(
