@@ -6,8 +6,10 @@ joy_node:
 
 joystick_servo:
   ros__parameters:
-    # Xbox-compatible Linux mapping. Hold the left bumper while commanding motion.
+    # Xbox-compatible Linux mapping. Hold the left bumper for Cartesian jogging
+    # or the right bumper for joint jogging. Pressing both stops the robot.
     deadman_button: 4
+    joint_deadman_button: 5
     deadzone: 0.1
     command_frame: link_1
     auto_start_servo: true
@@ -28,3 +30,9 @@ joystick_servo:
     angular_y.scale: 0.0
     angular_z.axis: -1
     angular_z.scale: 0.0
+
+    # Each list entry describes the same joint. Joint jog values are unitless
+    # because Servo's command_in_type is configured as "unitless".
+    joint_names: [joint_1, joint_2, joint_3]
+    joint_axes: [0, 1, 4]
+    joint_scales: [1.0, 1.0, 1.0]

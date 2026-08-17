@@ -6,7 +6,9 @@
 #include <memory>
 #include <stdexcept>
 #include <string>
+#include <vector>
 
+#include "control_msgs/msg/joint_jog.hpp"
 #include "geometry_msgs/msg/twist_stamped.hpp"
 #include "moveit_msgs/srv/change_control_dimensions.hpp"
 #include "moveit_msgs/srv/change_drift_dimensions.hpp"
@@ -29,6 +31,8 @@ public:
     const auto joy_topic = declare_parameter<std::string>("joy_topic", "/joy");
     const auto twist_topic =
       declare_parameter<std::string>("twist_topic", "/servo_node/delta_twist_cmds");
+    const auto joint_topic =
+      declare_parameter<std::string>("joint_topic", "/servo_node/delta_joint_cmds");
     command_frame_ = declare_parameter<std::string>("command_frame", "link_1");
     servo_start_service_ =
       declare_parameter<std::string>("servo_start_service", "/servo_node/start_servo");
@@ -40,6 +44,7 @@ public:
       declare_parameter<std::string>("status_topic", "/servo_node/status");
 
     deadman_button_ = declare_parameter<std::int64_t>("deadman_button", 4);
+    joint_deadman_button_ = declare_parameter<std::int64_t>("joint_deadman_button", 5);
     deadzone_ = declare_parameter<double>("deadzone", 0.1);
     auto_start_servo_ = declare_parameter<bool>("auto_start_servo", true);
 
@@ -50,15 +55,40 @@ public:
     angular_y_ = declare_axis("angular_y", -1, 0.0);
     angular_z_ = declare_axis("angular_z", 3, 0.0);
 
+    joint_names_ = declare_parameter<std::vector<std::string>>(
+      "joint_names", {"joint_1", "joint_2", "joint_3"});
+    const auto joint_axes = declare_parameter<std::vector<std::int64_t>>(
+      "joint_axes", {0, 1, 4});
+    const auto joint_scales = declare_parameter<std::vector<double>>(
+      "joint_scales", {1.0, 1.0, 1.0});
+
     if (deadzone_ < 0.0 || deadzone_ >= 1.0) {
       throw std::invalid_argument("deadzone must be in the range [0.0, 1.0)");
     }
-    if (deadman_button_ < 0) {
-      throw std::invalid_argument("deadman_button must be non-negative");
+    if (deadman_button_ < 0 || joint_deadman_button_ < 0) {
+      throw std::invalid_argument("deadman buttons must be non-negative");
+    }
+    if (deadman_button_ == joint_deadman_button_) {
+      throw std::invalid_argument("deadman_button and joint_deadman_button must be different");
+    }
+    if (joint_names_.empty() || joint_names_.size() != joint_axes.size() ||
+      joint_names_.size() != joint_scales.size())
+    {
+      throw std::invalid_argument(
+              "joint_names, joint_axes, and joint_scales must be non-empty and the same size");
+    }
+    joint_mappings_.reserve(joint_names_.size());
+    for (std::size_t i = 0; i < joint_names_.size(); ++i) {
+      if (joint_names_[i].empty()) {
+        throw std::invalid_argument("joint_names cannot contain an empty name");
+      }
+      joint_mappings_.push_back({joint_axes[i], joint_scales[i]});
     }
 
     twist_pub_ = create_publisher<geometry_msgs::msg::TwistStamped>(
       twist_topic, rclcpp::SystemDefaultsQoS());
+    joint_pub_ = create_publisher<control_msgs::msg::JointJog>(
+      joint_topic, rclcpp::SystemDefaultsQoS());
     joy_sub_ = create_subscription<sensor_msgs::msg::Joy>(
       joy_topic, rclcpp::SensorDataQoS(),
       std::bind(&JoystickServo::joy_callback, this, std::placeholders::_1));
@@ -77,8 +107,9 @@ public:
 
     RCLCPP_INFO(
       get_logger(),
-      "Joystick teleoperation ready; hold button %ld to command motion in frame '%s'",
-      static_cast<long>(deadman_button_), command_frame_.c_str());
+      "Joystick teleoperation ready; hold button %ld for Cartesian jogging or button %ld for "
+      "joint jogging",
+      static_cast<long>(deadman_button_), static_cast<long>(joint_deadman_button_));
   }
 
 private:
@@ -86,6 +117,13 @@ private:
   {
     std::int64_t index;
     double scale;
+  };
+
+  enum class JogMode
+  {
+    NONE,
+    CARTESIAN,
+    JOINT,
   };
 
   AxisMapping declare_axis(
@@ -128,13 +166,40 @@ private:
         get_logger(), *get_clock(), 5000,
         "Joystick reports %zu buttons, but deadman_button is configured as %ld",
         joy->buttons.size(), static_cast<long>(deadman_button_));
-      publish_zero_if_needed();
+      stop_active_command();
       return;
     }
 
-    const bool enabled = joy->buttons[deadman_button_] != 0;
-    if (!enabled) {
-      publish_zero_if_needed();
+    if (static_cast<std::size_t>(joint_deadman_button_) >= joy->buttons.size()) {
+      RCLCPP_ERROR_THROTTLE(
+        get_logger(), *get_clock(), 5000,
+        "Joystick reports %zu buttons, but joint_deadman_button is configured as %ld",
+        joy->buttons.size(), static_cast<long>(joint_deadman_button_));
+      stop_active_command();
+      return;
+    }
+
+    const bool cartesian_enabled = joy->buttons[deadman_button_] != 0;
+    const bool joint_enabled = joy->buttons[joint_deadman_button_] != 0;
+    if (cartesian_enabled == joint_enabled) {
+      if (cartesian_enabled) {
+        RCLCPP_WARN_THROTTLE(
+          get_logger(), *get_clock(), 5000,
+          "Both jog dead-man buttons are pressed; stopping until exactly one is selected");
+      }
+      stop_active_command();
+      return;
+    }
+
+    const JogMode requested_mode =
+      cartesian_enabled ? JogMode::CARTESIAN : JogMode::JOINT;
+    if (active_mode_ != requested_mode) {
+      stop_active_command();
+      active_mode_ = requested_mode;
+    }
+
+    if (requested_mode == JogMode::JOINT) {
+      publish_joint_command(*joy);
       return;
     }
 
@@ -148,7 +213,18 @@ private:
     command.twist.angular.y = read_axis(*joy, angular_y_);
     command.twist.angular.z = read_axis(*joy, angular_z_);
     twist_pub_->publish(command);
-    deadman_was_pressed_ = true;
+  }
+
+  void publish_joint_command(const sensor_msgs::msg::Joy & joy)
+  {
+    control_msgs::msg::JointJog command;
+    command.header.stamp = now();
+    command.joint_names = joint_names_;
+    command.velocities.reserve(joint_mappings_.size());
+    for (const auto & mapping : joint_mappings_) {
+      command.velocities.push_back(read_axis(joy, mapping));
+    }
+    joint_pub_->publish(command);
   }
 
   void status_callback(const std_msgs::msg::Int8::ConstSharedPtr status)
@@ -177,17 +253,25 @@ private:
     }
   }
 
-  void publish_zero_if_needed()
+  void stop_active_command()
   {
-    if (!deadman_was_pressed_) {
+    if (active_mode_ == JogMode::NONE) {
       return;
     }
 
-    geometry_msgs::msg::TwistStamped command;
-    command.header.stamp = now();
-    command.header.frame_id = command_frame_;
-    twist_pub_->publish(command);
-    deadman_was_pressed_ = false;
+    if (active_mode_ == JogMode::CARTESIAN) {
+      geometry_msgs::msg::TwistStamped command;
+      command.header.stamp = now();
+      command.header.frame_id = command_frame_;
+      twist_pub_->publish(command);
+    } else {
+      control_msgs::msg::JointJog command;
+      command.header.stamp = now();
+      command.joint_names = joint_names_;
+      command.velocities.assign(joint_names_.size(), 0.0);
+      joint_pub_->publish(command);
+    }
+    active_mode_ = JogMode::NONE;
   }
 
   void try_start_servo()
@@ -281,6 +365,7 @@ private:
   rclcpp::Subscription<sensor_msgs::msg::Joy>::SharedPtr joy_sub_;
   rclcpp::Subscription<std_msgs::msg::Int8>::SharedPtr status_sub_;
   rclcpp::Publisher<geometry_msgs::msg::TwistStamped>::SharedPtr twist_pub_;
+  rclcpp::Publisher<control_msgs::msg::JointJog>::SharedPtr joint_pub_;
   rclcpp::Client<std_srvs::srv::Trigger>::SharedPtr servo_start_client_;
   rclcpp::Client<moveit_msgs::srv::ChangeControlDimensions>::SharedPtr
     control_dimensions_client_;
@@ -290,9 +375,9 @@ private:
   std::string command_frame_;
   std::string servo_start_service_;
   std::int64_t deadman_button_;
+  std::int64_t joint_deadman_button_;
   double deadzone_;
   bool auto_start_servo_;
-  bool deadman_was_pressed_{ false };
   bool start_request_pending_{ false };
   bool control_dimensions_request_pending_{ false };
   bool drift_dimensions_request_pending_{ false };
@@ -300,6 +385,7 @@ private:
   bool control_dimensions_configured_{ false };
   bool drift_dimensions_configured_{ false };
   bool received_joy_{ false };
+  JogMode active_mode_{ JogMode::NONE };
   std::int8_t last_servo_status_{ -127 };
   AxisMapping linear_x_;
   AxisMapping linear_y_;
@@ -307,6 +393,8 @@ private:
   AxisMapping angular_x_;
   AxisMapping angular_y_;
   AxisMapping angular_z_;
+  std::vector<std::string> joint_names_;
+  std::vector<AxisMapping> joint_mappings_;
 };
 
 }  // namespace gungnir_controller

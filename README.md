@@ -75,7 +75,8 @@ source install/setup.bash
 ros2 launch gungnir_controller servo.launch.py
 ```
 
-Hold the left bumper while moving the sticks. See the
+Hold the left bumper for Cartesian jogging or the right bumper for joint
+jogging while moving the sticks. See the
 [controller README](src/gungnir_controller/README.md) for the mapping, safety
 behavior, configuration, and diagnostics.
 

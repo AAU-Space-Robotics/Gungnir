@@ -4,6 +4,7 @@ project(gungnir_controller)
 # find dependencies
 find_package(rclcpp REQUIRED)
 find_package(ament_cmake REQUIRED)
+find_package(control_msgs REQUIRED)
 find_package(geometry_msgs REQUIRED)
 find_package(moveit_msgs REQUIRED)
 find_package(pluginlib REQUIRED)
@@ -26,6 +27,7 @@ ament_target_dependencies(gungnir_controller
 add_executable(joystick_servo src/joystick_servo.cpp)
 target_compile_features(joystick_servo PUBLIC cxx_std_17)
 ament_target_dependencies(joystick_servo
+  control_msgs
   geometry_msgs
   moveit_msgs
   rclcpp
