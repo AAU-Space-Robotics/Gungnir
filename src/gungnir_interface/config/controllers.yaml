@@ -43,9 +43,9 @@ joint_trajectory_controller:
 
     gains:  # Control tuning for each joint
       # {Proportional gain, derivative gain, feed-forward velocity}
-      joint_1: {p: 3.0, d: 0.3, ff_velocity_scale: 1.0}  
-      joint_2: {p: 3.0, d: 0.7, ff_velocity_scale: 1.0}
-      joint_3: {p: 3.0, d: 0.7, ff_velocity_scale: 1.0}
+      joint_1: {p: 1.0, d: 0.0, ff_velocity_scale: 1.0}  
+      joint_2: {p: 1.0, d: 0.0, ff_velocity_scale: 1.0}
+      joint_3: {p: 1.0, d: 0.0, ff_velocity_scale: 1.0}
       # joint_4: {p: 1.0, d: 1.0, ff_velocity_scale: 1.0}
       # joint_5: {p: 1.0, d: 1.0, ff_velocity_scale: 1.0}
       # joint_6: {p: 1.0, d: 1.0, ff_velocity_scale: 1.0}
