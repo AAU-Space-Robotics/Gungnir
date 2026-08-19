@@ -6,10 +6,16 @@
   <!-- helper macro -->
   <xacro:include filename="$(find gungnir_description)/urdf/inc/create_link.xacro"/>
 
+  <!--
+    The CAD meshes were exported with their front along -X.  Rotate every link
+    frame 180 degrees about its joint (Z) axis so +X is the physical forward
+    direction.  The inverse rotation in each mesh origin keeps the rendered and
+    collision geometry in exactly the same pose.
+  -->
   <xacro:create_link
       link_name="base_link"
       xyz_offset="0 0 0"
-      rpy_offset="0 0 0"
+      rpy_offset="0 0 ${pi}"
       mesh_package="gungnir_description"
       mesh_name="base_link"
   />
@@ -17,23 +23,23 @@
   <xacro:create_link
       link_name="link_1" 
       xyz_offset="0 0 -0.141275"
-      rpy_offset="0 0 0"
+      rpy_offset="0 0 ${pi}"
       mesh_package="gungnir_description"
       mesh_name="link_1"
   />
 
   <xacro:create_link
       link_name="link_2"
-      xyz_offset="0 0.141275 0"
-      rpy_offset="${pi/2} 0 0"
+      xyz_offset="0 -0.141275 0"
+      rpy_offset="${pi/2} 0 ${pi}"
       mesh_package="gungnir_description"
       mesh_name="link_2"
   />
 
   <xacro:create_link
       link_name="link_3"
-      xyz_offset="0 ${-upperarm_length-0.141275} 0"
-      rpy_offset="${-pi/2} 0 0"
+      xyz_offset="0 ${upperarm_length+0.141275} 0"
+      rpy_offset="${-pi/2} 0 ${pi}"
       mesh_package="gungnir_description"
       mesh_name="link_3"
   />
@@ -76,7 +82,7 @@
   <joint name="base_joint" type="fixed">
     <parent link="world"/>
     <child link="base_link"/>
-    <origin xyz="0 0 0" rpy="0 0 0"/>
+    <origin xyz="0 0 0" rpy="0 0 ${pi}"/>
   </joint>
 
   <!-- joints - main serial chain -->
@@ -91,7 +97,7 @@
   <joint name="joint_2" type="revolute">
     <parent link="link_1"/>
     <child link="link_2"/>
-    <origin xyz="0 0 0.0" rpy="${-pi/2} 0 0"/>
+    <origin xyz="0 0 0" rpy="${pi/2} 0 0"/>
     <axis xyz="0 0 1"/>
     <limit effort="1000.0" lower="${-pi}" upper="${pi}" velocity="2.5"/>
   </joint>
@@ -99,7 +105,7 @@
   <joint name="joint_3" type="revolute">
     <parent link="link_2"/>
     <child link="link_3"/>
-    <origin xyz="0 ${-upperarm_length} 0" rpy="0 ${pi} ${pi}"/>
+    <origin xyz="0 ${upperarm_length} 0" rpy="0 ${pi} ${pi}"/>
     <axis xyz="0 0 1"/>
     <limit effort="1000.0" lower="${-pi}" upper="${pi}" velocity="2.5"/>
   </joint>
