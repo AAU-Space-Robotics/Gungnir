@@ -10,5 +10,6 @@ source /opt/ros/humble/setup.bash
 echo "source /opt/ros/humble/setup.bash" >> ~/.bashrc
 echo "alias quick_build='colcon build && source install/setup.bash'" >> ~/.bashrc
 echo "alias test_trajectory='ros2 launch ros2_control_demo_example_7 send_trajectory.launch.py'" >> ~/.bashrc
+echo "alias servo='ros2 launch gungnir_controller servo.launch.py'" >> ~/.bashrc
 
 bash
